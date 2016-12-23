@@ -4,6 +4,8 @@
 
 #include "sgx_tseal.h"
 
+#include <Python.h>
+
 #define SECRET_LEN 256
 #define PLAIN_TEXT_LEN 256
 
@@ -15,12 +17,10 @@ uint8_t* g_unsealed_secret;
 uint8_t* g_unsealed_plain_text;
 
 
-int seal_data_in_enclave(uint8_t* secret, uint8_t* plain_text, sgx_sealed_data_t* sealed_buf)
+int seal_data(uint8_t* secret, uint32_t secret_len, uint8_t* plain_text, uint32_t plain_text_len, sgx_sealed_data_t* sealed_buf)
 {
     fprintf(stderr, "Sealing data\n");
 
-    uint32_t secret_len = SECRET_LEN;
-    uint32_t plain_text_len = PLAIN_TEXT_LEN;
     uint32_t sealed_len = sizeof(sgx_sealed_data_t) + secret_len + plain_text_len;
 
     // Seal the secret data
@@ -28,14 +28,37 @@ int seal_data_in_enclave(uint8_t* secret, uint8_t* plain_text, sgx_sealed_data_t
     if(ret != SGX_SUCCESS)
     {
         fprintf(stderr, "Failed to seal data\n");
-        return -1;
+        return ret;
     }
 
     return 0;
 }
 
 
-int unseal_data_in_enclave(uint8_t* secret, uint8_t* plain_text, sgx_sealed_data_t* sealed_buf)
+void seal(char* secret, uint32_t secret_len, char* plain_text, uint32_t plain_text_len, char** p_sealed_buf, uint32_t* p_sealed_len)
+{
+    uint32_t sealed_len = sizeof(sgx_sealed_data_t) + secret_len + plain_text_len;
+
+    sgx_sealed_data_t* sealed_buf = malloc(sealed_len);
+    if(sealed_buf == NULL)
+    {
+        // XXX: Return error message
+        fprintf(stderr, "Out of memory\n");
+        abort();
+    }
+    memset(sealed_buf, 0, sealed_len);
+
+    int ret = seal_data((uint8_t*) secret, secret_len, (uint8_t*) plain_text, plain_text_len, sealed_buf);
+    // XXX: Return error message
+    if(ret != 0)
+        return;
+
+    *p_sealed_buf = (char*) sealed_buf;
+    *p_sealed_len = sealed_len;
+}
+
+
+int unseal_data(uint8_t* secret, uint8_t* plain_text, sgx_sealed_data_t* sealed_buf)
 {
     fprintf(stderr, "Unsealing data\n");
 
@@ -46,14 +69,48 @@ int unseal_data_in_enclave(uint8_t* secret, uint8_t* plain_text, sgx_sealed_data
     fprintf(stderr, "plain_text_len: %u\n", plain_text_len);
 
     // Unseal current sealed buf
-    sgx_status_t ret = sgx_unseal_data(sealed_buf, plain_text, &plain_text_len, secret, &unsealed_data_len);
+    sgx_status_t ret = sgx_unseal_data((sgx_sealed_data_t*) sealed_buf, plain_text, &plain_text_len, secret, &unsealed_data_len);
     if(ret != SGX_SUCCESS)
     {
         fprintf(stderr, "Failed to unseal data.\n");
-        return -1;
+        return ret;
     }
 
     return 0;
+}
+
+
+void unseal(char** p_secret, uint32_t* p_secret_len, char** p_plain_text, uint32_t* p_plain_text_len, char* sealed_buf)
+{
+    uint32_t secret_len = sgx_get_encrypt_txt_len((sgx_sealed_data_t*) sealed_buf);
+    uint32_t plain_text_len = sgx_get_add_mac_txt_len((sgx_sealed_data_t*) sealed_buf);
+
+    uint8_t* secret = (uint8_t*) calloc(secret_len, sizeof(uint8_t));
+    if(secret == NULL)
+    {
+        // XXX: Return error message
+        fprintf(stderr, "Out of memory\n");
+        abort();
+    }
+
+    uint8_t* plain_text = (uint8_t*) calloc(plain_text_len, sizeof(uint8_t));
+    if(plain_text == NULL)
+    {
+        // XXX: Return error message
+        fprintf(stderr, "Out of memory\n");
+        free(secret);
+        abort();
+    }
+
+    int ret = unseal_data(secret, plain_text, (sgx_sealed_data_t*) sealed_buf);
+    // XXX: Return error message
+    if(ret != 0)
+        return;
+
+    *p_secret = (char*) secret;
+    *p_secret_len = secret_len;
+    *p_plain_text = (char*) plain_text;
+    *p_plain_text_len = plain_text_len;
 }
 
 
@@ -62,15 +119,14 @@ void set_global_data()
     // Allocate memory to save the sealed data.
     uint32_t sealed_len = sizeof(sgx_sealed_data_t) + SECRET_LEN + PLAIN_TEXT_LEN;
 
-    g_sealed_buf = (sgx_sealed_data_t*) malloc(sealed_len);
+    g_sealed_buf = (sgx_sealed_data_t*) calloc(1, sealed_len);
     if(g_sealed_buf == NULL)
     {
         fprintf(stderr, "Out of memory\n");
         abort();
     }
-    memset(g_sealed_buf, 0, sealed_len);
 
-    g_secret = (uint8_t*) malloc(SECRET_LEN);
+    g_secret = (uint8_t*) calloc(SECRET_LEN, sizeof(uint8_t));
     if(g_secret == NULL)
     {
         fprintf(stderr, "Out of memory\n");
@@ -78,7 +134,7 @@ void set_global_data()
         abort();
     }
 
-    g_plain_text = (uint8_t*) malloc(PLAIN_TEXT_LEN);
+    g_plain_text = (uint8_t*) calloc(PLAIN_TEXT_LEN, sizeof(uint8_t));
     if(g_plain_text == NULL)
     {
         fprintf(stderr, "Out of memory\n");
@@ -87,7 +143,7 @@ void set_global_data()
         abort();
     }
 
-    g_unsealed_secret = (uint8_t*) malloc(SECRET_LEN);
+    g_unsealed_secret = (uint8_t*) calloc(SECRET_LEN, sizeof(uint8_t));
     if(g_unsealed_secret == NULL)
     {
         fprintf(stderr, "Out of memory\n");
@@ -97,7 +153,7 @@ void set_global_data()
         abort();
     }
 
-    g_unsealed_plain_text = (uint8_t*) malloc(PLAIN_TEXT_LEN);
+    g_unsealed_plain_text = (uint8_t*) calloc(PLAIN_TEXT_LEN, sizeof(uint8_t));
     if(g_unsealed_plain_text == NULL)
     {
         fprintf(stderr, "Out of memory\n");
@@ -110,6 +166,12 @@ void set_global_data()
 
     return;
 }
+
+
+char *charstring(char *s){
+    return s;
+}
+
 
 void release_global_data()
 {
@@ -146,18 +208,18 @@ int main()
     strcpy((char*) g_secret, "foobar");
     strcpy((char*) g_plain_text, "baobab");
 
-    ret = seal_data_in_enclave(g_secret, g_plain_text, g_sealed_buf);
+    ret = seal_data(g_secret, SECRET_LEN, g_plain_text, PLAIN_TEXT_LEN, g_sealed_buf);
     if(ret != 0)
     {
-        fprintf(stderr, "Error: seal_data_in_enclave() returned %u\n", ret);
+        fprintf(stderr, "Error: seal_data() returned %i\n", ret);
         release_global_data();
         abort();
     }
 
-    ret = unseal_data_in_enclave(g_unsealed_secret, g_unsealed_plain_text, g_sealed_buf);
+    ret = unseal_data(g_unsealed_secret, g_unsealed_plain_text, g_sealed_buf);
     if(ret != 0)
     {
-        fprintf(stderr, "Error: unseal_data_in_enclave() returned %u\n", ret);
+        fprintf(stderr, "Error: unseal_data() returned %i\n", ret);
         release_global_data();
         abort();
     }

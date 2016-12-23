@@ -30,11 +30,7 @@
  */
 
 
-/*
- * Description:
- *     The file provides `enclave_entry' function to switch code between
- * trusted and untrusted envronment.
- */
+// XXX: Removed everything related to entering / exiting the enclave, because we don't enter / exit the enclave when run inside the library OS
 
     .file "trts_pic.S"
 

@@ -1,0 +1,10 @@
+tags
+__pycache__
+.idea
+*.manifest.sgx
+*.manifest
+*.token
+*.sig
+*.o
+.nfs*
+cmake-build-debug

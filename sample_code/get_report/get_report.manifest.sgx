@@ -15,6 +15,10 @@ fs.mount.lib2.type = chroot
 fs.mount.lib2.path = /host
 fs.mount.lib2.uri = file:/lib/x86_64-linux-gnu
 
+fs.mount.shim.type = chroot
+fs.mount.shim.path = /shim
+fs.mount.shim.uri = file:/home/adrian/projects/graphene/LibOS/shim
+
 fs.mount.bin.type = chroot
 fs.mount.bin.path = /bin
 fs.mount.bin.uri = file:/bin
@@ -43,7 +47,7 @@ sgx.isvsvn = 0
 sgx.sigfile = file:get_report.sig
 sgx.static_address = 1
 sgx.thread_num = 4
-sgx.trusted_checksum.exec = a9fbd9fe374f5cc4fcd52d7c50e7001038648ce691eea20d0160eaad6fa59d93
+sgx.trusted_checksum.exec = de265695bda445c97bd724cc52e69c34f4205fb986f9b96a75af38a0c69d0ee8
 sgx.trusted_checksum.ld = f968b9fcbaaafdffd9284b032f438c4c8158137f5f3d4ff8d040223392fec653
 sgx.trusted_checksum.libc = 694bce3dd24069c05fb181de5f67c9b4120b3506f0ca8c48577c0c382f519413
 sgx.trusted_checksum.libdl = 3ea7c71efc7dee902522363aad88636d906a049f2e52afc7b5d539547dc505aa

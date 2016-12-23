@@ -1,4 +1,4 @@
-loader.preload = file:/home/adrian/projects/graphene/LibOS/shim/src/libsysdb.so
+loader.preload = file:$(SHIMPATH)
 loader.exec = file:./seal_data
 loader.env.LD_LIBRARY_PATH = /graphene:/host:/usr/lib:/usr/lib/x86_64-linux-gnu
 loader.env.PATH = /usr/bin:/bin
@@ -9,7 +9,7 @@ loader.debug_type = none
 
 fs.mount.lib1.type = chroot
 fs.mount.lib1.path = /graphene
-fs.mount.lib1.uri = file:/home/adrian/projects/graphene/LibOS/glibc-build
+fs.mount.lib1.uri = file:$(LIBCDIR)
 
 fs.mount.lib2.type = chroot
 fs.mount.lib2.path = /host
@@ -31,10 +31,12 @@ sys.stack.size = 256K
 sys.brk.size = 4M
 glibc.heap_size = 16M
 
-sgx.trusted_files.ld = file:/home/adrian/projects/graphene/LibOS/glibc-build/ld-linux-x86-64.so.2
-sgx.trusted_files.libc = file:/home/adrian/projects/graphene/LibOS/glibc-build/libc.so.6
-sgx.trusted_files.libdl = file:/home/adrian/projects/graphene/LibOS/glibc-build/libdl.so.2
-sgx.trusted_files.libm = file:/home/adrian/projects/graphene/LibOS/glibc-build/libm.so.6
-sgx.trusted_files.libpthread = file:/home/adrian/projects/graphene/LibOS/glibc-build/libpthread.so.0
-sgx.trusted_files.liburil = file:/home/adrian/projects/graphene/LibOS/glibc-build/libutil.so.1
+sgx.trusted_files.ld = file:$(LIBCDIR)/ld-linux-x86-64.so.2
+sgx.trusted_files.libc = file:$(LIBCDIR)/libc.so.6
+sgx.trusted_files.libdl = file:$(LIBCDIR)/libdl.so.2
+sgx.trusted_files.libm = file:$(LIBCDIR)/libm.so.6
+sgx.trusted_files.libpthread = file:$(LIBCDIR)/libpthread.so.0
+sgx.trusted_files.liburil = file:$(LIBCDIR)/libutil.so.1
 sgx.trusted_files.libz = file:/lib/x86_64-linux-gnu/libz.so.1
+sgx.trusted_files.libpython = file:/usr/lib/x86_64-linux-gnu/libpython3.5m.so.1.0
+sgx.trusted_files.libexpat = file:/lib/x86_64-linux-gnu/libexpat.so.1

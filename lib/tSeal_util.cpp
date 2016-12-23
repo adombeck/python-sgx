@@ -29,42 +29,35 @@
  *
  */
 
-#ifndef _TRTS_INST_H_
-#define _TRTS_INST_H_
 
-#include "sgx.h"
+#include "sgx_tseal.h"
+#ifndef UINT32_MAX
+#define UINT32_MAX      0xffffffffU
+#endif
 
-/* Attention: 
-  * if the following alignment requirement changes, go to selib to
-  * review the memory allocation of sgx_create_report and sgx_get_key.
-  */
-#define TARGET_INFO_ALIGN_SIZE  512
-#define REPORT_DATA_ALIGN_SIZE  128
-#define REPORT_ALIGN_SIZE       512
-#define KEY_REQUEST_ALIGN_SIZE  512
-#define KEY_ALIGN_SIZE          16
-
-#define BIT_ERROR(x)            (1 << (x))
-
-typedef enum _egetkey_status_t
+uint32_t sgx_calc_sealed_data_size(const uint32_t add_mac_txt_size, const uint32_t txt_encrypt_size) 
 {
-    EGETKEY_SUCCESS           = 0,
-    EGETKEY_INVALID_ATTRIBUTE = BIT_ERROR(1),
-    EGETKEY_INVALID_CPUSVN    = BIT_ERROR(5),
-    EGETKEY_INVALID_ISVSVN    = BIT_ERROR(6),
-    EGETKEY_INVALID_KEYNAME   = BIT_ERROR(8),
-}  egetkey_status_t;
+    if(add_mac_txt_size > UINT32_MAX - txt_encrypt_size)
+        return UINT32_MAX;
+    uint32_t payload_size = add_mac_txt_size + txt_encrypt_size; //Calculate the payload size
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void do_ereport(const sgx_target_info_t *target_info, const sgx_report_data_t *report_data, sgx_report_t *report);
-int do_egetkey(const sgx_key_request_t *key_request, sgx_key_128bit_t *key);
-uint32_t do_rdrand(uint32_t *rand);
-
-#ifdef __cplusplus
+    if(payload_size > UINT32_MAX - sizeof(sgx_sealed_data_t))
+        return UINT32_MAX;
+    return (uint32_t)(sizeof(sgx_sealed_data_t) + payload_size);
 }
-#endif
 
-#endif
+uint32_t sgx_get_add_mac_txt_len(const sgx_sealed_data_t* p_sealed_data) 
+{
+    if(p_sealed_data == NULL)
+        return UINT32_MAX;
+
+    uint32_t data_size = p_sealed_data->aes_data.payload_size - p_sealed_data->plain_text_offset;
+    if (data_size > p_sealed_data->aes_data.payload_size)
+        return UINT32_MAX;
+    return data_size;
+}
+
+uint32_t sgx_get_encrypt_txt_len(const sgx_sealed_data_t* p_sealed_data) 
+{
+    return ((p_sealed_data == NULL) ? UINT32_MAX : p_sealed_data->plain_text_offset);
+}

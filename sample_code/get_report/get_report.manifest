@@ -15,6 +15,10 @@ fs.mount.lib2.type = chroot
 fs.mount.lib2.path = /host
 fs.mount.lib2.uri = file:/lib/x86_64-linux-gnu
 
+fs.mount.shim.type = chroot
+fs.mount.shim.path = /shim
+fs.mount.shim.uri = file:/home/adrian/projects/graphene/LibOS/shim
+
 fs.mount.bin.type = chroot
 fs.mount.bin.path = /bin
 fs.mount.bin.uri = file:/bin
