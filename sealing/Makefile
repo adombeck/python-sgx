@@ -3,10 +3,16 @@ NAME=sealing
 all: $(NAME) $(NAME).manifest.sgx _$(NAME).so
 
 LIB = /home/adrian/projects/python-sgx/lib
+SDK = /opt/intel/sgxsdk
+SDK_LIB = $(SDK)/lib64
+SGX_GIT_REPO = /home/adrian/projects/linux-sgx
 
 SRC = $(LIB)/memset_s.c $(LIB)/rdrand.c $(LIB)/sgx_aes_gcm.cpp $(LIB)/sgx_create_report.cpp $(LIB)/sgx_get_key.cpp $(LIB)/sgx_read_rand.cpp $(LIB)/trts.c $(LIB)/trts_pic.S
-LIBS = /opt/intel/sgxsdk/lib64/libsgx_tcrypto.a /opt/intel/sgxsdk/lib64/libsgx_tservice.a
-INCLUDES = -I/opt/intel/sgxsdk/include -I/home/adrian/projects/linux-sgx/common/inc/internal -I/home/adrian/projects/linux-sgx/external/crypto_px/include -I/home/adrian/projects/linux-sgx/sdk/trts/linux -I/home/adrian/projects/linux-sgx/external/rdrand -I/home/adrian/projects/linux-sgx/sdk/tseal
+
+LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
+# $(SDK_LIB)/libsgx_tkey_exchange.a $(SDK_LIB)/libsgx_ukey_exchange.a $(SDK_LIB)/libsgx_tsetjmp.a $(SDK_LIB)/libsgx_tstdcxx.a
+
+INCLUDES = -I$(SDK)/include -I$(SGX_GIT_REPO)/common/inc/internal -I$(SGX_GIT_REPO)/external/crypto_px/include -I$(SGX_GIT_REPO)/sdk/trts/linux -I$(SGX_GIT_REPO)/external/rdrand -I$(SGX_GIT_REPO)/sdk/tseal
 
 $(NAME): $(NAME).o $(SRC) $(LIBS)
 	gcc -Wall $^ $(INCLUDES) -ldl -o $@
