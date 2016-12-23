@@ -47,6 +47,8 @@
 
 #include "sgx_memset_s.h"
 
+// add a version to tservice.
+SGX_ACCESS_VERSION(tservice, 1)
 
 sgx_status_t sgx_create_report(const sgx_target_info_t *target_info, const sgx_report_data_t *report_data, sgx_report_t *report)
 {
@@ -56,6 +58,8 @@ sgx_status_t sgx_create_report(const sgx_target_info_t *target_info, const sgx_r
     // target_info is allowed to be NULL, but if it is not NULL, it must be within the enclave
     if(target_info)
     {
+        if (!sgx_is_within_enclave(target_info, sizeof(*target_info)))
+            return SGX_ERROR_INVALID_PARAMETER;
 
         for(i=0; i<SGX_TARGET_INFO_RESERVED1_BYTES; ++i)
         {
@@ -70,7 +74,15 @@ sgx_status_t sgx_create_report(const sgx_target_info_t *target_info, const sgx_r
         }
     }
     // report_data is allowed to be NULL, but if it is not NULL, it must be within the enclave
+    if(report_data && !sgx_is_within_enclave(report_data, sizeof(*report_data)))
+    {
+        return SGX_ERROR_INVALID_PARAMETER;
+    }
     // report must be within the enclave
+    if(!report || !sgx_is_within_enclave(report, sizeof(*report)))
+    {
+        return SGX_ERROR_INVALID_PARAMETER;
+    }
 
     // allocate memory
     // 
