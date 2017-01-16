@@ -8,3 +8,7 @@ __pycache__
 *.o
 .nfs*
 cmake-build-debug
+Makefile.config
+*.egg-info
+build
+dist

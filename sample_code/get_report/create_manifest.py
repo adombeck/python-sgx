@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import os
 import glob
+import os
 
 from config import GRAPHENE_DIR
 
