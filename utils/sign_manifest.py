@@ -21,12 +21,10 @@ def execute(command):
 
 def sign_manifest(manifest):
     output = manifest + ".sgx"
-    exec_ = manifest[:-9]
     command = [SGX_SIGN,
                "-libpal", LIBPAL,
                "-key", KEY,
                "-output", output,
-               "-exec", exec_,
                "-manifest", manifest
                ]
     execute(command)
