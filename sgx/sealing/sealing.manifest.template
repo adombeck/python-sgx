@@ -1,5 +1,5 @@
 loader.preload = file:$(SHIMPATH)
-loader.exec = file:./seal_data
+loader.exec = file:./sealing
 loader.env.LD_LIBRARY_PATH = /graphene:/host:/usr/lib:/usr/lib/x86_64-linux-gnu
 loader.env.PATH = /usr/bin:/bin
 loader.env.USERNAME =
