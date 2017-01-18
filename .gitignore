@@ -12,3 +12,4 @@ Makefile.config
 *.egg-info
 build
 dist
+*.sealed
