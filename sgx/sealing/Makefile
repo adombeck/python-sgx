@@ -31,8 +31,7 @@ _$(NAME).so: $(NAME).o
 
 $(NAME).manifest:
 	rm -rf $(NAME).manifest.sgx
-	python3 $(PROJECT_HOME)/utils/create_manifest.py
-#	$(UTILS)/create_manifest.py
+	$(UTILS)/create_manifest.py
 
 $(NAME).manifest.sgx: $(NAME).manifest
 	$(UTILS)/sign_manifest.py
