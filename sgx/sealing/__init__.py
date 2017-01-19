@@ -1,1 +1,1 @@
-from ..sealing.sealing import *
+from sgx.sealing.sealing import *

@@ -1,4 +1,4 @@
-%module sealing
+%module sealing_swig
 
 %{
 #define SWIG_PYTHON_STRICT_BYTE_CHAR

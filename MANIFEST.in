@@ -1,1 +1,1 @@
-include sgx/sealing/_sealing.so
+include sgx/sealing/_*.so

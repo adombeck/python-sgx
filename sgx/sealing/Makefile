@@ -1,6 +1,7 @@
 NAME=sealing
+SO_NAME=_$(NAME)_swig.so
 
-all: $(NAME) $(NAME).manifest.sgx _$(NAME).so
+all: $(SO_NAME)
 
 PROJECT_HOME = ../..
 
@@ -15,10 +16,7 @@ SRC = $(LIB)/memset_s.c $(LIB)/rdrand.c $(LIB)/sgx_aes_gcm.cpp $(LIB)/sgx_create
 LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
 # $(SDK_LIB)/libsgx_tkey_exchange.a $(SDK_LIB)/libsgx_ukey_exchange.a $(SDK_LIB)/libsgx_tsetjmp.a $(SDK_LIB)/libsgx_tstdcxx.a
 
-INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
-
-$(NAME): $(NAME).o $(SRC) $(LIBS)
-	gcc -Wall $^ $(INCLUDES) -ldl -o $@
+INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
 $(NAME)_wrap.c: $(NAME).i
 	swig -python -I$(LIB) $(INCLUDES) $<
@@ -26,17 +24,9 @@ $(NAME)_wrap.c: $(NAME).i
 $(NAME).o: $(NAME).c $(NAME)_wrap.c $(SRC)
 	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5 -ldl
 
-_$(NAME).so: $(NAME).o
+$(SO_NAME): $(NAME).o
 	gcc -Wall -shared *.o $(LIBS) -o $@
-
-$(NAME).manifest:
-	rm -rf $(NAME).manifest.sgx
-	$(UTILS)/create_manifest.py
-
-$(NAME).manifest.sgx: $(NAME).manifest
-	$(UTILS)/sign_manifest.py
-
 
 .PHONY: clean
 clean:
-	rm -rf $(NAME) $(NAME).manifest $(NAME).manifest.sgx $(NAME).token $(NAME).sig $(NAME)_wrap.c _$(NAME).so $(NAME).py *.o
+	rm -rf $(NAME)_wrap.c $(SO_NAME) $(NAME)_swig.py *.o
