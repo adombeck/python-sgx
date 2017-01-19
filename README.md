@@ -13,7 +13,8 @@ Currently, this project does not provide functions to *create* an enclave. Inste
 ## Installation
 
 1. Adjust the paths in `python-sgx/config.py`
-2. Run `sudo ./setup.py install`
+2. Run `make` (or `make clean && make` if you built the project previously)
+3. Run `sudo ./setup.py install`
 
 ## Run tests
     cd launcher

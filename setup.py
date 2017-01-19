@@ -25,10 +25,6 @@ with open("Makefile.config", "w+") as makefile_config:
     makefile_config.write("SDK=%s\n" % config.SDK_DIR)
     makefile_config.write("SDK_GIT_DIR=%s\n" % config.SDK_GIT_DIR)
 
-# Build C libraries
-subprocess.check_call(["make", "clean"])
-subprocess.check_call(["make"])
-
 # Link graphene's pal launcher to /usr/bin/graphene-pal
 pal = "/usr/bin/graphene-pal"
 if not path.exists(pal):
