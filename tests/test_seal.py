@@ -12,7 +12,7 @@ file_name = "tests/test.sealed"
 
 def seal():
     with open(file_name, "bw+") as f:
-        data = sgx.sealing.seal(b"this is some secret text", b"this is additional plaintext")
+        data = sgx.sealing.seal(b"this is some secret text with a \0 (null byte)", b"this is additional plaintext with a \0 (null byte)")
         print("data: %r" % data)
         print("data_len: %r" % len(data))
         f.write(data)
