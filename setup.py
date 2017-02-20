@@ -11,8 +11,22 @@ from setuptools import setup, find_packages
 from codecs import open
 from os import path
 import subprocess
+import sh
+from distutils.version import LooseVersion
 
 import config
+
+
+# Check if swig >= 3.0.10 is installed
+try:
+  out = sh.grep(sh.dpkg("-s", "swig"), '^Version:')
+  version = out.split(" ")[-1].split("-")[0]
+  if LooseVersion(version) < LooseVersion("3.0.10"):
+    exit("Error: swig version is lower than 3.0.10. Install swig 3.0.10 or higher.")
+except sh.ErrorReturnCode_1:
+  exit("Error: Couldn't find swig")
+
+
 
 here = path.abspath(path.dirname(__file__))
 
@@ -47,7 +61,6 @@ setup(
     # Author details
     author='Adrian Dombeck',
     author_email='adrian.dombeck@rub.de',
-
     # Choose your license
     # license='MIT',
 
