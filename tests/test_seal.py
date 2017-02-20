@@ -27,13 +27,21 @@ def unseal():
     print("plain text: %r" % plain_text)
 
 
+def print_usage():
+    print("Usage: %s (seal|unseal)" % sys.argv[0])
+
+
 def main():
+    if len(sys.argv) < 2:
+        print_usage()
+        return
+
     if sys.argv[1] == "seal":
         seal()
     elif sys.argv[1] == "unseal":
         unseal()
     else:
-        print("Usage: %s (seal|unseal)")
+        print_usage()
 
 if __name__ == "__main__":
     try:
@@ -42,5 +50,3 @@ if __name__ == "__main__":
         # Without this graphene's pal does not return on exceptions
         print(traceback.format_exc(), file=sys.stderr)
         exit()
-
-
