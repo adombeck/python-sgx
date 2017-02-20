@@ -20,18 +20,21 @@ LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a $(SDK_LIB)/libsg
 INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
 $(NAME)_wrap.c: $(NAME).i
-	@#swig -python -I$(LIB) $(INCLUDES) $<
-	swig -python -I/opt/intel/sgxsdk/include $<
+	swig -python -I$(SDK)/include $<
 
-$(NAME).o: $(NAME).c $(NAME)_wrap.c #$(SRC)
-	@#gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5 -ldl
-	g++ -g -fpie -I/usr/include/python3.5 -ldl -I/opt/intel/sgxsdk/include -c $^ 
-	cc -g -fpie -I/usr/include/python3.5 -I/opt/intel/sgxsdk/include -I/opt/intel/sgxsdk/include/tlibc -I/opt/intel/sgxsdk/include/stlport -c Enclave/Enclave_t.c -o Enclave/Enclave_t.o
+$(NAME)_wrap.o: $(NAME)_wrap.c
+	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
 
-$(SO_NAME): $(NAME).o
-	@#gcc -Wall -shared -fPIC -lstdc++ -Wl,--defsym,__ImageBase=0 *.o $(LIBS) -o $@
-	g++ -g Enclave/Enclave_t.o $(NAME).o -o libenclave.so -nodefaultlibs -nostartfiles -L/opt/intel/sgxsdk/lib64 -Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive -Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -lsgx_tcrypto -lsgx_tservice -Wl,--end-group -Wl,-pie,-eenclave_entry -Wl,--defsym,__ImageBase=0
+test_t.o: test_t.c
+	gcc -g -fPIC -c test_t.c -iquote/opt/pysgx/sgxsdk/include/tlibc -I/opt/pysgx/sgxsdk/include 
 
+$(NAME).o: $(NAME).c
+	gcc -g -fPIC -c $^ -I/opt/pysgx/sgxsdk/include -I/usr/include/python3.5 
+
+# XXX: Re-add -Wl,--no-undefined and include all required static libraries
+$(SO_NAME): $(NAME).o  test_t.o $(NAME)_wrap.o
+	gcc -g -shared $^ -o $@ -shared-libgcc -L/opt/pysgx/sgxsdk/lib64 -Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive -Wl,--start-group -lsgx_tstdc -lsgx_tstdcxx -lsgx_tkey_exchange -lsgx_tcrypto -lsgx_tservice -Wl,--end-group -Wl,-Bsymbolic -Wl,--defsym,__ImageBase=0 -Wl,--allow-multiple-definition
+	
 
 .PHONY: clean
 clean:
