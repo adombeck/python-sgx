@@ -36,6 +36,8 @@
 #include "sgx_tcrypto.h"
 #include "string.h"
 
+#include "sgx_uae_service.h"
+
 #include <stdio.h>
 
 #include <Python.h>
@@ -47,6 +49,12 @@ int create_pse_session()
 {
     return sgx_create_pse_session();
 }
+
+int get_extended_epid_group_id(uint32_t* p_group_id)
+{
+    return sgx_get_extended_epid_group_id(p_group_id);
+}
+
 
 // This is the public EC key of the SP. The corresponding private EC key is
 // used by the SP to sign data used in the remote attestation SIGMA protocol

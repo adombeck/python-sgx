@@ -38,10 +38,12 @@ sgx.trusted_files.libpthread = file:$(RUNTIME)/libpthread.so.0
 sgx.trusted_files.liburil = file:$(RUNTIME)/libutil.so.1
 sgx.trusted_files.libz = file:/lib/x86_64-linux-gnu/libz.so.1
 sgx.trusted_files.libexpat = file:/lib/x86_64-linux-gnu/libexpat.so.1
-sgx.trusted_files.ls = file:/bin/ls
 
-sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
+# for attestation
+sgx.trusted_files.libsgx_uae_service = file:/usr/lib/libsgx_uae_service.so
+sgx.trusted_files.libprotopuf = file:/usr/lib/x86_64-linux-gnu/libprotobuf.so.9
 sgx.trusted_files.libstdcpp = file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6
+sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
 
 
 #sgx.allowed_files.pyhome = file:/usr/lib/python3
