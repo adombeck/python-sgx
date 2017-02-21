@@ -19,12 +19,15 @@ LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
 INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
 $(NAME)_wrap.c: $(NAME).i
-	swig -python -I$(LIB) $(INCLUDES) $<
+	swig -python -I$(SDK)/include $<
 
-$(NAME).o: $(NAME).c $(NAME)_wrap.c $(SRC)
-	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5 -ldl
+$(NAME)_wrap.o: $(NAME)_wrap.c
+	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
 
-$(SO_NAME): $(NAME).o
+$(NAME).o: $(NAME).c $(SRC)
+	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
+
+$(SO_NAME): $(NAME).o $(NAME)_wrap.o
 	gcc -Wall -shared *.o $(LIBS) -o $@
 
 .PHONY: clean
