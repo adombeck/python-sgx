@@ -27,6 +27,7 @@ int seal_data(uint8_t* secret, uint32_t secret_len, uint8_t* plain_text, uint32_
     sgx_status_t ret = sgx_seal_data(plain_text_len, plain_text, secret_len, secret, sealed_len, sealed_buf);
     if(ret != SGX_SUCCESS)
     {
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
         fprintf(stderr, "Failed to seal data\n");
         return ret;
     }
@@ -42,15 +43,16 @@ void seal(char* secret, uint32_t secret_len, char* plain_text, uint32_t plain_te
     sgx_sealed_data_t* sealed_buf = malloc(sealed_len);
     if(sealed_buf == NULL)
     {
-        // XXX: Return error message
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
         fprintf(stderr, "Out of memory\n");
         abort();
     }
     memset(sealed_buf, 0, sealed_len);
 
     int ret = seal_data((uint8_t*) secret, secret_len, (uint8_t*) plain_text, plain_text_len, sealed_buf);
-    // XXX: Return error message
+
     if(ret != 0)
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
         return;
 
     *p_sealed_buf = (char*) sealed_buf;

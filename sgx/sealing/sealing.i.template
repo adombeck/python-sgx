@@ -1,4 +1,4 @@
-%module sealing_swig
+%module $(NAME)_swig
 
 %{
 #define SWIG_PYTHON_STRICT_BYTE_CHAR
@@ -31,3 +31,4 @@ extern void seal(char* secret, uint32_t secret_len, char* plain_text, uint32_t p
 %cstring_output_allocate_size(char** p_secret, uint32_t* p_secret_len, free(*$1));
 %cstring_output_allocate_size(char** p_plain_text, uint32_t* p_plain_text_len, free(*$1));
 extern void unseal(char** p_secret, uint32_t* p_secret_len, char** p_plain_text, uint32_t* p_plain_text_len, char* sealed_buf);
+

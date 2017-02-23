@@ -18,6 +18,9 @@ LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
 
 INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
+$(NAME).i:
+	sed -e "s:\$$(NAME):$(NAME):g" $(NAME).i.template > $(NAME).i
+
 $(NAME)_wrap.c: $(NAME).i
 	swig -python -I$(SDK)/include $<
 
@@ -32,4 +35,4 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o
 
 .PHONY: clean
 clean:
-	rm -rf $(NAME)_wrap.c $(SO_NAME) $(NAME)_swig.py *.o
+	rm -rf $(NAME).i $(NAME)_wrap.c $(SO_NAME) $(NAME)_swig.py *.o
