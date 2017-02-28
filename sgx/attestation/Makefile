@@ -33,8 +33,12 @@ $(NAME).o: $(NAME).c $(SRC)
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o
 	gcc -Wall -shared *.o $(LIBS) -lsgx_uae_service -o $@
 
-exec: $(NAME).o $(NAME)_wrap.o
-	gcc -Wall *.o $(LIBS) -lsgx_uae_service -lpython3.4m
+exec: $(NAME).o
+	gcc -g -Wall $^ $(LIBS) \
+	    -lsgx_uae_service \
+	    -lpython3.4m
+
+
 
 .PHONY: clean
 clean:

@@ -2,20 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "sgx_tseal.h"
-
 #include <Python.h>
-
-#define SECRET_LEN 256
-#define PLAIN_TEXT_LEN 256
-
-// Global data
-sgx_sealed_data_t* g_sealed_buf;
-uint8_t* g_secret;
-uint8_t* g_plain_text;
-uint8_t* g_unsealed_secret;
-uint8_t* g_unsealed_plain_text;
-
 
 #include "sgx_uae_service.h"
 
