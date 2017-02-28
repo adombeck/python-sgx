@@ -33,6 +33,9 @@ $(NAME).o: $(NAME).c $(SRC)
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o
 	gcc -Wall -shared *.o $(LIBS) -lsgx_uae_service -o $@
 
+exec: $(NAME).o $(NAME)_wrap.o
+	gcc -Wall *.o $(LIBS) -lsgx_uae_service -lpython3.4m
+
 .PHONY: clean
 clean:
 	rm -rf $(NAME).i $(NAME)_wrap.c $(SO_NAME) $(NAME)_swig.py *.o

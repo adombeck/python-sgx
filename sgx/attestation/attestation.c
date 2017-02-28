@@ -30,3 +30,12 @@ void get_extended_epid_group_id(uint32_t* p_group_id)
     }
     fprintf(stderr, "Successfully got EPID group id %u\n", *p_group_id);
 }
+
+int main()
+{
+    fprintf(stderr, "Getting EPID group id... ");
+    uint32_t group_id;
+    get_extended_epid_group_id(&group_id);
+
+    return 0;
+}
