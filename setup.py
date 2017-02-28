@@ -18,13 +18,12 @@ import config
 
 
 # Check if swig >= 3.0.10 is installed
-try:
-  out = sh.grep(sh.dpkg("-s", "swig"), '^Version:')
-  version = out.split(" ")[-1].split("-")[0]
-  if LooseVersion(version) < LooseVersion("3.0.10"):
-    exit("Error: swig version is lower than 3.0.10. Install swig 3.0.10 or higher.")
-except sh.ErrorReturnCode_1:
+out = sh.grep(sh.dpkg("-s", "swig", "swig3.0", _ok_code=[0,1]), '^Version:')
+version = out.split(" ")[-1].split("-")[0]
+if not version:
   exit("Error: Couldn't find swig")
+if LooseVersion(version) < LooseVersion("3.0.10"):
+  exit("Error: swig version is lower than 3.0.10. Install swig 3.0.10 or higher.")
 
 
 

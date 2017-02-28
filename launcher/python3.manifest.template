@@ -41,13 +41,13 @@ sgx.trusted_files.libexpat = file:/lib/x86_64-linux-gnu/libexpat.so.1
 
 # for attestation
 sgx.trusted_files.libsgx_uae_service = file:/usr/lib/libsgx_uae_service.so
-sgx.trusted_files.libprotopuf = file:/usr/lib/x86_64-linux-gnu/libprotobuf.so.9
+sgx.trusted_files.libprotopuf = file:/usr/lib/x86_64-linux-gnu/libprotobuf.so.$(LIBPROTOBUF_VERSION)
 sgx.trusted_files.libstdcpp = file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
 
 
 #sgx.allowed_files.pyhome = file:/usr/lib/python3
-sgx.allowed_files.pyhome2 = file:/usr/lib/python3.5
-sgx.allowed_files.pyhome3 = file:/usr/local/lib/python3.5
+sgx.allowed_files.pyhome2 = file:/usr/lib/python$(PYTHON_VERSION)
+sgx.allowed_files.pyhome3 = file:/usr/local/lib/python$(PYTHON_VERSION)
 
 sgx.allowed_files.tests = file:tests

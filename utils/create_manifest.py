@@ -3,7 +3,7 @@
 import glob
 import os
 
-from config import GRAPHENE_DIR
+from config import GRAPHENE_DIR, PYTHON_VERSION, LIBPROTOBUF_VERSION
 
 RUNTIME = os.path.join(GRAPHENE_DIR, "Runtime")
 
@@ -15,5 +15,7 @@ for manifest_template in manifest_templates:
         with open(manifest, "w+") as f_manifest:
             for line in f_template:
                 line = line.replace("$(RUNTIME)", RUNTIME) 
+                line = line.replace("$(PYTHON_VERSION)", PYTHON_VERSION) 
+                line = line.replace("$(LIBPROTOBUF_VERSION)", LIBPROTOBUF_VERSION) 
                 f_manifest.write(line)
 
