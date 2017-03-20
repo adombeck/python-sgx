@@ -1,9 +1,9 @@
-NAME=attestation
+NAME=sealing
 SO_NAME=_$(NAME)_swig.so
 
 all: $(SO_NAME)
 
-PROJECT_HOME = ../..
+PROJECT_HOME = ../../..
 
 include $(PROJECT_HOME)/Makefile.config
 
@@ -31,14 +31,7 @@ $(NAME).o: $(NAME).c $(SRC)
 	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
 
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o
-	gcc -Wall -shared *.o $(LIBS) -lsgx_uae_service -o $@
-
-exec: $(NAME).o
-	gcc -g -Wall $^ $(LIBS) \
-	    -lsgx_uae_service \
-	    -lpython3.4m
-
-
+	gcc -Wall -shared *.o $(LIBS) -o $@
 
 .PHONY: clean
 clean:

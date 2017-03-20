@@ -1,5 +1,5 @@
-from sgx.sealing import sealing_swig
-from sgx.sealing.sealing_swig import *
+from sgx.trusted.sealing import sealing_swig
+from sgx.trusted.sealing.sealing_swig import *
 
 
 def seal(secret, plain_text=bytes()):

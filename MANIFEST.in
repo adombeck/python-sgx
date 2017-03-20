@@ -1,1 +1,2 @@
-include sgx/*/_*.so
+include sgx/trusted/*/_*.so
+include sgx/untrusted/*/_*.so

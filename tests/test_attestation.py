@@ -2,7 +2,7 @@ import sys
 import traceback
 
 try:
-    import sgx.attestation
+    import sgx.untrusted.attestation
 except ImportError as e:
     print(traceback.format_exc(), file=sys.stderr)
     exit()
@@ -10,7 +10,7 @@ except ImportError as e:
 
 def main():
     print("in main()")
-    id = sgx.attestation.get_extended_epid_group_id()
+    id = sgx.untrusted.attestation.get_extended_epid_group_id()
     print("id: %r" % id)
 
 
