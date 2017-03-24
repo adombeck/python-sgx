@@ -2,16 +2,16 @@ import sys
 import traceback
 
 try:
-    import sgx.untrusted.attestation
+    print("Importing attestation_swig")
+    import attestation_swig
 except ImportError as e:
     print(traceback.format_exc(), file=sys.stderr)
     exit()
 
 
 def main():
-    print("in main()")
-    id = sgx.untrusted.attestation.get_extended_epid_group_id()
-    print("id: %r" % id)
+    attestation_swig.main()
+    print("Successfully executed attestation_swig.main()")
 
 
 if __name__ == "__main__":

@@ -9,7 +9,7 @@
 #include "sgx_ukey_exchange.h"
 #include "global_data.h"
 
-static sgx_ec256_public_t remote_party_public_key = {
+static sgx_ec256_public_t g_sp_pub_key = {
     {
         0x72, 0x12, 0x8a, 0x7a, 0x17, 0x52, 0x6e, 0xbf,
         0x85, 0xd0, 0x3a, 0x62, 0x37, 0x30, 0xae, 0xad,
@@ -25,9 +25,12 @@ static sgx_ec256_public_t remote_party_public_key = {
 
 };
 
-void initialize_remote_attestation(sgx_ec256_public_t* p_remote_party_public_key, int use_pse, sgx_ra_context_t* p_context)
+// XXX: Add SWIG typemap for sgx_ec256_public_t and get the public key from the Python caller
+//void initialize_remote_attestation(sgx_ec256_public_t* p_public_key, int use_pse, sgx_ra_context_t* p_context)
+void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context)
 {
-    sgx_status_t ret = sgx_ra_init(p_remote_party_public_key, use_pse, p_context);
+    sgx_ec256_public_t* p_public_key = &g_sp_pub_key;
+    sgx_status_t ret = sgx_ra_init(p_public_key, use_pse, p_context);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
@@ -64,18 +67,10 @@ void print_public_key(sgx_ec256_public_t public_key)
     fprintf(stderr, "\n");
 }
 
+
 int main()
 {
-    fprintf(stderr, "Testing allocation... ");
-    char* s = malloc(1024);
-    if (s == NULL)
-    {
-        fprintf(stderr, "allocation failed\n");
-        return 1;
-    }
-    fprintf(stderr, "allocation succeeded\n");
-
-    fprintf(stderr, "&remote_party_public_key: %p\n", &remote_party_public_key);
+    fprintf(stderr, "&g_sp_pub_key: %p\n", &g_sp_pub_key);
     fprintf(stderr, "&g_global_data: %p\n", &g_global_data);
     fprintf(stderr, "g_global_data.enclave_size: %lx\n", g_global_data.enclave_size);
     fprintf(stderr, "g_global_data.heap_size: %lx\n", g_global_data.heap_size);
@@ -83,7 +78,8 @@ int main()
     fprintf(stderr, "__ImageBase: %p\n", &__ImageBase);
 
     sgx_ra_context_t context = INT_MAX;
-    initialize_remote_attestation(&remote_party_public_key, 0, &context);
+    //initialize_remote_attestation(&g_sp_pub_key, 0, &context);
+    initialize_remote_attestation(0, &context);
 
     sgx_ec256_public_t enclave_public_key;
     get_new_public_key(context, &enclave_public_key);

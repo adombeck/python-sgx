@@ -1,0 +1,39 @@
+%module $(NAME)_swig
+
+%{
+#define SWIG_PYTHON_STRICT_BYTE_CHAR
+#include "sgx_tseal.h"
+#include "sgx_key.h"
+#include "sgx_error.h"
+#include "sgx_defs.h"
+#include "sgx_attributes.h"
+#include "sgx_tcrypto.h"
+#include "sgx.h"
+#include "sgx_defs.h"
+#include "sgx_report.h"
+
+typedef uint32_t sgx_ra_context_t;
+
+extern void main();
+
+extern void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context);
+extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key);
+%}
+
+%include "cdata.i"
+%include "stdint.i"
+%include "typemaps.i"
+%include "cstring.i"
+%include "sgx_defs.h"
+%include "sgx_tcrypto.h"
+
+typedef uint32_t sgx_ra_context_t;
+
+extern void main();
+
+%apply uint32_t* OUTPUT { uint32_t* p_context };
+extern void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context);
+
+### CONTINUE HERE: define typemap for sgx_ec256_public_t ###
+%apply sgx_ec256_public_t* OUTPUT { sgx_ec256_public_t* p_enclave_public_key };
+extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key);
