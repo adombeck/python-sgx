@@ -1,0 +1,6 @@
+[submodule "linux-sgx"]
+	path = linux-sgx
+	url = https://github.com/adombeck/linux-sgx
+[submodule "graphene"]
+	path = graphene
+	url = https://github.com/adombeck/graphene
