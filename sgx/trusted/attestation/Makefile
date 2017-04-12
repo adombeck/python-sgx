@@ -20,16 +20,16 @@ $(NAME).i:
 	chmod 444 $(NAME).i
 
 $(NAME)_wrap.c: $(NAME).i
-	swig -python -I$(SDK)/include $<
+	swig -Werror -python -I$(SDK)/include $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
-	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
+	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
 
 $(NAME).o: $(NAME).c
-	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
+	gcc -Wall -Werror -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
 
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
-	gcc -g -Wall -shared $^ -o $@ \
+	gcc -g -Wall -Werror  -shared $^ -o $@ \
 		-I$(SDK)/include \
 		-I/usr/include/python3.5 \
 		-shared-libgcc \
@@ -50,10 +50,10 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 		-Wl,-Bdynamic -lsgx_uae_service -lsgx_ukey_exchange
 
 call_tables.o: call_tables.c
-	gcc -g -Wall -fPIC -c $^ -iquote$(SDK)/include/tlibc -I$(SDK)/include
+	gcc -g -Wall -Werror  -fPIC -c $^ -iquote$(SDK)/include/tlibc -I$(SDK)/include
 
 exec: $(NAME).o call_tables.o
-	gcc -g -Wall $^ -o $@ \
+	gcc -g -Wall -Werror  $^ -o $@ \
 		-I$(SDK)/include \
 		-I/usr/include/python3.5 \
 		-shared-libgcc \
