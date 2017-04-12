@@ -17,7 +17,7 @@ typedef uint32_t sgx_ra_context_t;
 extern void main();
 
 extern void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context);
-extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key);
+extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key);
 %}
 
 %include "cdata.i"
@@ -25,7 +25,6 @@ extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_e
 %include "typemaps.i"
 %include "cstring.i"
 %include "sgx_defs.h"
-%include "sgx_tcrypto.h"
 
 typedef uint32_t sgx_ra_context_t;
 
@@ -34,6 +33,65 @@ extern void main();
 %apply uint32_t* OUTPUT { uint32_t* p_context };
 extern void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context);
 
-### CONTINUE HERE: define typemap for sgx_ec256_public_t ###
-%apply sgx_ec256_public_t* OUTPUT { sgx_ec256_public_t* p_enclave_public_key };
-extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key);
+
+// ----------------------------------------------------------------------------
+// map sgx_ec256_public_t to Python class with gx, gy as bytes objects
+// ----------------------------------------------------------------------------
+
+// Define input and output typemaps for gx
+
+%typemap(in) uint8_t gx[32] {
+  if (!PyBytes_Check($input)) {
+    PyErr_SetString(PyExc_TypeError, "Expecting a bytes parameter");
+    SWIG_fail;
+  }
+
+  if (PyObject_Length($input) != 32) {
+    PyErr_SetString(PyExc_ValueError, "Expecting a bytes parameter with 32 elements");
+    SWIG_fail;
+  }
+
+  uint8_t res[32];
+  char* bytes = PyBytes_AsString($input);
+  int i;
+  for (i=0; i<32; i++) {
+    res[i] = (uint8_t) bytes[i];
+  }
+
+  $1 = res;
+}
+
+%typemap(out) uint8_t gx[32] {
+    $result = PyBytes_FromStringAndSize((char*) $1, 32);
+}
+
+
+// Reuse the gx typemaps for gy
+
+%typemap(in) uint8_t gy[32] = uint8_t gx[32];
+%typemap(out) uint8_t gy[32] = uint8_t gx[32];
+
+
+// Define typemaps for pp_enclave_public_key
+
+// This typemap suppresses requiring the parameter as an input.
+%typemap(in,numinputs=0) sgx_ec256_public_t** pp_enclave_public_key (sgx_ec256_public_t* temp) {
+  $1 = &temp;
+}
+
+%typemap(argout) sgx_ec256_public_t** pp_enclave_public_key {
+    #$result = SWIG_NewPointerObj(*$1, $descriptor(sgx_ec256_public_t*), SWIG_POINTER_OWN);
+    char tmp[64];
+    memcpy(&tmp[0], (*$1)->gx, 32);
+    memcpy(&tmp[32], (*$1)->gy, 32);
+    $result = PyBytes_FromStringAndSize(tmp, 64);
+}
+
+
+// Declare functions which use pp_enclave_public_key
+
+extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key);
+
+%include "sgx_tcrypto.h"
+
+// ----------------------------------------------------------------------------

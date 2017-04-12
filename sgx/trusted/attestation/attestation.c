@@ -6,6 +6,7 @@
 #include <Python.h>
 
 #include "sgx_tkey_exchange.h"
+#include "sgx_tkey_exchange_t.h"
 #include "sgx_ukey_exchange.h"
 #include "global_data.h"
 
@@ -25,6 +26,22 @@ static sgx_ec256_public_t g_sp_pub_key = {
 
 };
 
+void print_public_key(sgx_ec256_public_t public_key)
+{
+    int i;
+
+    fprintf(stderr, "&(public_key.gx): %p\n", &(public_key.gx));
+    fprintf(stderr, "public_key.gx: ");
+    for(i = 0; i < 32; i++)
+        fprintf(stderr, "%02hhx", public_key.gx[i]);
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "public_key.gy: ");
+    for(i = 0; i < 32; i++)
+        fprintf(stderr, "%02hhx", public_key.gy[i]);
+    fprintf(stderr, "\n");
+}
+
 // XXX: Add SWIG typemap for sgx_ec256_public_t and get the public key from the Python caller
 //void initialize_remote_attestation(sgx_ec256_public_t* p_public_key, int use_pse, sgx_ra_context_t* p_context)
 void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context)
@@ -40,33 +57,31 @@ void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context)
     fprintf(stderr, "Successfully initialized remote attestation\n");
 }
 
-void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key)
+void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key)
 {
-    sgx_status_t ret = sgx_ra_get_ga(context, p_enclave_public_key);
+    sgx_ec256_public_t* tmp1 = malloc(sizeof(sgx_ec256_public_t));
+    fprintf(stderr, "tmp1 before sgx_ra_get_ga: %p\n", tmp1);
+    sgx_ec256_public_t* tmp2 = malloc(sizeof(sgx_ec256_public_t));
+    // XXX: Test if tmp2 is Null
+
+    sgx_status_t ret = sgx_ra_get_ga(context, tmp1);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
         fprintf(stderr, "Failed to call sgx_ra_get_ga. Error code: 0x%x\n", ret);
         return;
     }
+
+    fprintf(stderr, "tmp1 after sgx_ra_get_ga: %p\n", tmp1);
+
+    memcpy(tmp2->gx, tmp1->gx, sizeof(tmp2->gx));
+    memcpy(tmp2->gy, tmp1->gy, sizeof(tmp2->gy));
+    *pp_enclave_public_key = tmp2;
+    free(tmp1);
+
     fprintf(stderr, "Successfully generated session key pair\n");
+    print_public_key(**pp_enclave_public_key);
 }
-
-void print_public_key(sgx_ec256_public_t public_key)
-{
-    int i;
-
-    fprintf(stderr, "public_key.gx: ");
-    for(i = 0; i < 32; i++)
-        fprintf(stderr, "%02hhx", public_key.gx[i]);
-    fprintf(stderr, "\n");
-
-    fprintf(stderr, "public_key.gy: ");
-    for(i = 0; i < 32; i++)
-        fprintf(stderr, "%02hhx", public_key.gy[i]);
-    fprintf(stderr, "\n");
-}
-
 
 int main()
 {
@@ -74,16 +89,16 @@ int main()
     fprintf(stderr, "&g_global_data: %p\n", &g_global_data);
     fprintf(stderr, "g_global_data.enclave_size: %lx\n", g_global_data.enclave_size);
     fprintf(stderr, "g_global_data.heap_size: %lx\n", g_global_data.heap_size);
-    fprintf(stderr, "enclave_base: %x\n", get_enclave_base());
+    //fprintf(stderr, "enclave_base: %x\n", get_enclave_base());
     fprintf(stderr, "__ImageBase: %p\n", &__ImageBase);
 
     sgx_ra_context_t context = INT_MAX;
     //initialize_remote_attestation(&g_sp_pub_key, 0, &context);
     initialize_remote_attestation(0, &context);
 
-    sgx_ec256_public_t enclave_public_key;
-    get_new_public_key(context, &enclave_public_key);
-    print_public_key(enclave_public_key);
+    sgx_ec256_public_t* p_enclave_public_key;
+    get_new_public_key(context, &p_enclave_public_key);
+    print_public_key(*p_enclave_public_key);
 
     return 0;
 }
