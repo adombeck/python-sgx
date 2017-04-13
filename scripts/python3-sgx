@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd /var/lib/python-sgx/
+/usr/bin/env graphene-pal python3.manifest.sgx "$@"
