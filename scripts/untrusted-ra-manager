@@ -1,0 +1,72 @@
+#!/usr/bin/env python3.5
+
+import sys
+import traceback
+import socketserver
+import socket
+import json
+import logging
+
+try:
+    from sgx.untrusted.attestation import get_extended_epid_group_id
+except ImportError as e:
+    print(traceback.format_exc(), file=sys.stderr)
+    exit()
+
+
+HOST = "127.0.0.1"
+PORT = 9876
+
+manager = None
+
+
+class RequestHandler(socketserver.StreamRequestHandler):
+    def handle(self):
+        client_socket = self.request
+        data = client_socket.recv(1024).strip()
+        logging.info("Got request %r", data)
+
+        if data == b"get_epid":
+            self.send_epid(client_socket)
+
+        if data == b"init_quote":
+            self.init_quote()
+
+    def send_epid(self, client_socket: socket.socket):
+        logging.info("Preparing to send EPID")
+        epid = get_extended_epid_group_id()
+        msg = json.dumps({"EPID": epid}).encode()
+        logging.info("Sending EPID")
+        client_socket.sendall(msg)
+        logging.info("EPID sent")
+
+    def init_quote(self):
+        pass
+
+
+class Manager(object):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        logging.info("Stopping server")
+        self.server.server_close()
+
+    def __init__(self):
+        self.server = socketserver.TCPServer((HOST, PORT), RequestHandler)
+
+    def run(self):
+        logging.info("Listening for attestation requests on %s:%s", HOST, PORT)
+        self.server.serve_forever()
+
+
+def main():
+    logging.basicConfig(level=logging.INFO)
+
+    global manager
+    with Manager() as manager:
+        manager.run()
+
+
+if __name__ == "__main__":
+    main()
