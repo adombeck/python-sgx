@@ -8,7 +8,9 @@
 #include "sgx_tkey_exchange.h"
 #include "sgx_tkey_exchange_t.h"
 #include "sgx_ukey_exchange.h"
+#include "sgx_uae_service.h"
 #include "global_data.h"
+
 
 static sgx_ec256_public_t g_sp_pub_key = {
     {
@@ -26,6 +28,7 @@ static sgx_ec256_public_t g_sp_pub_key = {
 
 };
 
+
 void print_public_key(sgx_ec256_public_t public_key)
 {
     int i;
@@ -42,12 +45,11 @@ void print_public_key(sgx_ec256_public_t public_key)
     fprintf(stderr, "\n");
 }
 
-// XXX: Add SWIG typemap for sgx_ec256_public_t and get the public key from the Python caller
-//void initialize_remote_attestation(sgx_ec256_public_t* p_public_key, int use_pse, sgx_ra_context_t* p_context)
-void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context)
+
+void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, sgx_ra_context_t* p_context)
 {
-    sgx_ec256_public_t* p_public_key = &g_sp_pub_key;
-    sgx_status_t ret = sgx_ra_init(p_public_key, use_pse, p_context);
+    // sgx_ec256_public_t* p_public_key = &g_sp_pub_key;
+    sgx_status_t ret = sgx_ra_init(&public_key, use_pse, p_context);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
@@ -56,6 +58,7 @@ void initialize_remote_attestation(int use_pse, sgx_ra_context_t* p_context)
     }
     fprintf(stderr, "Successfully initialized remote attestation\n");
 }
+
 
 void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key)
 {
@@ -94,7 +97,7 @@ int main()
 
     sgx_ra_context_t context = INT_MAX;
     //initialize_remote_attestation(&g_sp_pub_key, 0, &context);
-    initialize_remote_attestation(0, &context);
+    initialize_remote_attestation(g_sp_pub_key, 0, &context);
 
     sgx_ec256_public_t* p_enclave_public_key;
     get_new_public_key(context, &p_enclave_public_key);
