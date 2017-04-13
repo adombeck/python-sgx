@@ -3,7 +3,9 @@
 import glob
 import os
 
-from config import GRAPHENE_DIR, PYTHON_VERSION, LIBPROTOBUF_VERSION
+import sys
+sys.path.append('..')
+from sgx.config import GRAPHENE_DIR, PYTHON_VERSION, LIBPROTOBUF_VERSION
 
 RUNTIME = os.path.join(GRAPHENE_DIR, "Runtime")
 

@@ -3,8 +3,11 @@
 import glob
 import os
 import subprocess
+import argparse
 
-from config import GRAPHENE_DIR
+import sys 
+sys.path.append('..')
+from sgx.config import GRAPHENE_DIR
 
 SGX_SIGN = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/pal-sgx-sign")
 SGX_GET_TOKEN = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/pal-sgx-get-token")
@@ -37,7 +40,7 @@ def create_token(manifest):
                "-output", token,
                "-sig", sig]
     execute(command)
-
+    
 
 def main():
     for manifest in manifests:
