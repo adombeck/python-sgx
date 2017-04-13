@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.5
 """A setuptools based setup module.
 See:
 https://packaging.python.org/en/latest/distributing.html
@@ -6,16 +6,16 @@ https://github.com/pypa/sampleproject
 """
 
 # Always prefer setuptools over distutils
-from setuptools import setup, find_packages
+import os
+import sh
+import subprocess
 # To use a consistent encoding
 from codecs import open
-from os import path
-import subprocess
-import sh
 from distutils.version import LooseVersion
 
-import config
+from setuptools import setup, find_packages
 
+from sgx import config
 
 # Check if swig >= 3.0.10 is installed
 out = sh.grep(sh.dpkg("-s", "swig", "swig3.0", _ok_code=[0,1]), '^Version:')
@@ -26,19 +26,35 @@ if LooseVersion(version) < LooseVersion("3.0.10"):
   exit("Error: swig version is lower than 3.0.10. Install swig 3.0.10 or higher.")
 
 
+# Check if apport is installed (it produces error messages when executing Python with Graphene)
+try:
+    sh.dpkg("-s", "python3-apport")
+    exit("Error: python3-apport is installed. Please uninstall it.")
+except sh.ErrorReturnCode_1:
+    pass
 
-here = path.abspath(path.dirname(__file__))
+here = os.path.abspath(os.path.dirname(__file__))
 
 # Get the long description from the README file
-with open(path.join(here, 'README.md'), encoding='utf-8') as f:
+with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
     long_description = f.read()
 
 # Link graphene's pal launcher to /usr/bin/graphene-pal
 pal = "/usr/bin/graphene-pal"
-if not path.exists(pal):
-    subprocess.check_call(["ln", "-s", path.join(config.GRAPHENE_DIR, "Pal/src/pal"), pal])
+if not os.path.islink(pal):
+    subprocess.check_call(["ln", "-s", os.path.join(config.GRAPHENE_DIR, "Runtime/pal-Linux-SGX"), pal])
 
-setup(
+# Create key directory
+sh.install("-m", "755", "-d", config.KEY_DIR)
+
+# Create data directory
+sh.install("-m", "755", "-d", config.DATA_DIR)
+
+# Copy python3 launcher to data directory
+sh.cp("launcher/python3.manifest.sgx", config.DATA_DIR)
+sh.cp("launcher/python3.sig", config.DATA_DIR)
+
+dist = setup(
     name='sgx',
 
     # Versions should comply with PEP440.  For a discussion on single-sourcing
@@ -88,6 +104,10 @@ setup(
     # simple. Or you can use find_packages().
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
+    scripts=["scripts/python3-sgx",
+             "scripts/trusted-ra-manager",
+             "scripts/untrusted-ra-manager"],
+
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
     #   py_modules=["my_module"],
@@ -96,7 +116,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[],
+    install_requires=['sh', ],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -129,3 +149,22 @@ setup(
     #     ],
     # },
 )
+
+# Set PROJECT_GIT_DIR in config.py
+project_git_dir = os.path.realpath(os.path.dirname(__file__))
+
+lib_dir = dist.command_obj['install'].install_lib
+config_vars = dist.command_obj['install'].config_vars
+install_dir = os.path.join(lib_dir, "%s-py%s.egg" % (config_vars['dist_fullname'], config_vars['py_version_short']))
+config_path = os.path.join(install_dir, "sgx", "config.py")
+print("config_path: %r" % config_path)
+with open(config_path) as config_file:
+    original_config = config_file.readlines()
+
+with open(config_path, "w+") as config_file:
+    for line in original_config:
+        if line.startswith("PROJECT_GIT_DIR = "):
+            config_file.write("PROJECT_GIT_DIR = \"%s\"\n" % project_git_dir)
+        else:
+            config_file.write(line)
+
