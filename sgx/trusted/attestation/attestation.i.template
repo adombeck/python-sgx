@@ -44,7 +44,7 @@ extern void main();
 
 
 // ----------------------------------------------------------------------------
-// map sgx_ec256_public_t to Python class with gx, gy as bytes objects
+// map sgx_ec256_public_t to Python bytes
 // ----------------------------------------------------------------------------
 
 // Define input and output typemaps for gx
