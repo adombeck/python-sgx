@@ -13,3 +13,4 @@ Makefile.config
 build
 dist
 *.sealed
+scratch
