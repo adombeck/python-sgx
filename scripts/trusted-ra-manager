@@ -82,8 +82,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def send_msg1(self, client_socket: socket.socket):
         logging.info("Preparing to send msg1")
         logging.debug("Attester public key: %r", ATTESTER_PUBLIC_KEY)
-        # self.ra_context = initialize_remote_attestation(attester_public_key=ATTESTER_PUBLIC_KEY, use_pse=0)
-        self.ra_context = initialize_remote_attestation(use_pse=0)
+        self.ra_context = initialize_remote_attestation(attester_public_key=ATTESTER_PUBLIC_KEY, use_pse=0)
         public_key = get_new_public_key(self.ra_context)
         logging.info("Session public key: %r", public_key)
         msg1 = json.dumps({"public_key": public_key.hex()}).encode()

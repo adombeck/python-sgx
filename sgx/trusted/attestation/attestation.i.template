@@ -14,6 +14,17 @@
 
 typedef uint32_t sgx_ra_context_t;
 
+static void reverse_byte_array(uint8_t *array, size_t size)
+{
+    size_t i = 0;
+    for(i = 0; i < size / 2; i++)
+    {
+        uint8_t temp = array[i];
+        array[i] = array[size - i - 1];
+        array[size - i - 1] = temp;
+    }
+}
+
 extern void main();
 
 extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key);
@@ -27,6 +38,7 @@ extern void initialize_remote_attestation(sgx_ec256_public_t enclave_public_key,
 %include "sgx_defs.h"
 
 typedef uint32_t sgx_ra_context_t;
+
 
 extern void main();
 
@@ -90,14 +102,23 @@ extern void main();
         res.gy[i] = (uint8_t) bytes[i+32];
     }
 
+    // Reverse byte order to big-endian
+    reverse_byte_array(res.gx, 32);
+    reverse_byte_array(res.gy, 32);
+
     $1 = res;
 }
 
 %typemap(out) sgx_ec256_public_t enclave_public_key {
-    char tmp[64];
+    uint8_t tmp[64];
     memcpy(&tmp[0], $1.gx, 32);
     memcpy(&tmp[32], $1.gy, 32);
-    $result = PyBytes_FromStringAndSize(tmp, 64);
+
+    // Reverse byte order to big-endian
+    reverse_byte_array(&tmp[0], 32);
+    reverse_byte_array(&tmp[32], 32);
+
+    $result = PyBytes_FromStringAndSize((char*) tmp, 64);
 }
 
 
@@ -110,10 +131,15 @@ extern void main();
 
 %typemap(argout) sgx_ec256_public_t** pp_enclave_public_key {
     #$result = SWIG_NewPointerObj(*$1, $descriptor(sgx_ec256_public_t*), SWIG_POINTER_OWN);
-    char tmp[64];
+    uint8_t tmp[64];
     memcpy(&tmp[0], (*$1)->gx, 32);
     memcpy(&tmp[32], (*$1)->gy, 32);
-    $result = PyBytes_FromStringAndSize(tmp, 64);
+
+    // Reverse byte order to big-endian
+    reverse_byte_array(&tmp[0], 32);
+    reverse_byte_array(&tmp[32], 32);
+
+    $result = PyBytes_FromStringAndSize((char*) tmp, 64);
 }
 
 

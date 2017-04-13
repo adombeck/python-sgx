@@ -48,7 +48,8 @@ void print_public_key(sgx_ec256_public_t public_key)
 
 void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, sgx_ra_context_t* p_context)
 {
-    // sgx_ec256_public_t* p_public_key = &g_sp_pub_key;
+    fprintf(stderr, "initializing remote attestation with public_key:\n");
+    print_public_key(public_key);
     sgx_status_t ret = sgx_ra_init(&public_key, use_pse, p_context);
     if(ret != SGX_SUCCESS)
     {
@@ -63,7 +64,6 @@ void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, s
 void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key)
 {
     sgx_ec256_public_t* tmp1 = malloc(sizeof(sgx_ec256_public_t));
-    fprintf(stderr, "tmp1 before sgx_ra_get_ga: %p\n", tmp1);
     sgx_ec256_public_t* tmp2 = malloc(sizeof(sgx_ec256_public_t));
     // XXX: Test if tmp2 is Null
 
@@ -74,8 +74,6 @@ void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclav
         fprintf(stderr, "Failed to call sgx_ra_get_ga. Error code: 0x%x\n", ret);
         return;
     }
-
-    fprintf(stderr, "tmp1 after sgx_ra_get_ga: %p\n", tmp1);
 
     memcpy(tmp2->gx, tmp1->gx, sizeof(tmp2->gx));
     memcpy(tmp2->gy, tmp1->gy, sizeof(tmp2->gy));
@@ -96,7 +94,6 @@ int main()
     fprintf(stderr, "__ImageBase: %p\n", &__ImageBase);
 
     sgx_ra_context_t context = INT_MAX;
-    //initialize_remote_attestation(&g_sp_pub_key, 0, &context);
     initialize_remote_attestation(g_sp_pub_key, 0, &context);
 
     sgx_ec256_public_t* p_enclave_public_key;
