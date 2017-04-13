@@ -1,0 +1,169 @@
+#!/usr/bin/env python3-sgx
+
+import sys
+import traceback
+import socketserver
+import socket
+import json
+import logging
+import argparse
+
+from sgx import util
+
+try:
+    from sgx.trusted.attestation import initialize_remote_attestation, get_new_public_key
+except ImportError as e:
+    print(traceback.format_exc(), file=sys.stderr)
+    exit()
+
+
+URA_MANAGER_PORT = 9876
+
+ATTESTER_PUBLIC_KEY = util.get_attester_public_key()
+
+manager = None
+
+
+class RequestHandler(socketserver.StreamRequestHandler):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ra_context = None
+
+    def handle(self):
+        logging.info("Got request")
+        client_socket = self.request
+        # data = self.rfile.readline().strip()
+        data = client_socket.recv(1024).strip()
+        logging.info("data: %r", data)
+
+        if data == b"attest":
+            self.send_msg0(client_socket)
+            self.send_msg1(client_socket)
+            self.receive_msg2(client_socket)
+
+    # -------------------------------------------------------------------------
+    # MSG0
+    # -------------------------------------------------------------------------
+
+    def send_msg0(self, client_socket: socket.socket):
+        logging.info("Preparing to send msg0")
+        epid = self.get_epid()
+        msg0 = json.dumps({"EPID": epid}).encode()
+        logging.info("Sending msg0")
+        client_socket.sendall(msg0)
+
+    def get_epid(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
+            ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+            self.send_epid_request(ura_socket)
+            epid = self.receive_epid(ura_socket)
+        return epid
+
+    @staticmethod
+    def send_epid_request(ura_socket: socket.socket):
+        logging.info("Sending EPID request")
+        ura_socket.sendall(b"get_epid")
+        logging.info("EPID request sent")
+
+    @staticmethod
+    def receive_epid(ura_socket: socket.socket()):
+        received_raw = ura_socket.recv(1024)
+        logging.debug("Received: %s" % received_raw)
+        received_json = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(received_json, dict))
+        assert (len(received_json) == 1)
+        return received_json["EPID"]
+
+    # -------------------------------------------------------------------------
+    # MSG1
+    # -------------------------------------------------------------------------
+
+    def send_msg1(self, client_socket: socket.socket):
+        logging.info("Preparing to send msg1")
+        logging.debug("Attester public key: %r", ATTESTER_PUBLIC_KEY)
+        # self.ra_context = initialize_remote_attestation(attester_public_key=ATTESTER_PUBLIC_KEY, use_pse=0)
+        self.ra_context = initialize_remote_attestation(use_pse=0)
+        public_key = get_new_public_key(self.ra_context)
+        logging.info("Session public key: %r", public_key)
+        msg1 = json.dumps({"public_key": public_key.hex()}).encode()
+        logging.info("Sending msg1")
+        client_socket.sendall(msg1)
+
+    # -------------------------------------------------------------------------
+    # MSG1
+    # -------------------------------------------------------------------------
+
+    def receive_msg2(self, client_socket: socket.socket):
+        logging.info("Waiting for msg2")
+        received_raw = client_socket.recv(1024)
+        logging.debug("Received: %s" % received_raw)
+        received_json = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(received_json, dict))
+        assert (isinstance(received_json["revocation_list"], list))
+        public_key = bytes.fromhex(received_json["public_key"])
+        spid = bytes.fromhex(received_json["spid"])
+        quote_type = bytes.fromhex(received_json["quote_type"])
+        kdf_id = bytes.fromhex(received_json["kdf_id"])
+        key_signature = bytes.fromhex(received_json["key_signature"])
+        mac = bytes.fromhex(received_json["mac"])
+        revocation_list = received_json["revocation_list"]
+
+        # report = process_msg2(self.ra_context, msg2, qe_target_info)
+
+        self.send_qe_init_request()
+
+    def send_qe_init_request(self):
+        pass
+
+
+
+class Manager(object):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        logging.info("Closing socket")
+        self.server.server_close()
+
+    def __init__(self, interface, port):
+        self.interface = interface
+        self.port = port
+        self.server = socketserver.TCPServer((interface, port), RequestHandler)
+
+    def run(self):
+        logging.info("Listening for attestation requests on %s:%s", self.interface, self.port)
+        self.server.serve_forever()
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--interface", "-i", default="127.0.0.1")
+    parser.add_argument("--port", "-p", type=int, default=6789)
+    parser.add_argument("--verbose", "-v", action="store_true")
+    return parser.parse_args()
+
+
+def init(args):
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+
+def main():
+    args = parse_args()
+    init(args)
+
+    global manager
+    with Manager(args.interface, args.port) as manager:
+        manager.run()
+
+
+if __name__ == "__main__":
+    try:
+        main()
+    except:
+        # Without this graphene's pal does not return on exceptions
+        print(traceback.format_exc(), file=sys.stderr)
+        exit()
