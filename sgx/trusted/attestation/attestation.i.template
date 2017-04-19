@@ -47,41 +47,7 @@ extern void main();
 // map sgx_ec256_public_t to Python bytes
 // ----------------------------------------------------------------------------
 
-// Define input and output typemaps for gx
-
-%typemap(in) uint8_t gx[32] {
-    if (!PyBytes_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "Expected a bytes parameter");
-        SWIG_fail;
-    }
-
-    if (PyObject_Length($input) != 32) {
-        PyErr_SetString(PyExc_ValueError, "Expected a bytes parameter with 32 elements");
-        SWIG_fail;
-    }
-
-    uint8_t res[32];
-    char* bytes = PyBytes_AsString($input);
-    int i;
-    for (i=0; i<32; i++) {
-        res[i] = (uint8_t) bytes[i];
-    }
-
-    $1 = res;
-}
-
-%typemap(out) uint8_t gx[32] {
-    $result = PyBytes_FromStringAndSize((char*) $1, 32);
-}
-
-
-// Reuse the gx typemaps for gy
-
-%typemap(in) uint8_t gy[32] = uint8_t gx[32];
-%typemap(out) uint8_t gy[32] = uint8_t gx[32];
-
-
-// Define typemaps for enclave_public_key
+// Define typemaps for sgx_ec256_public_t
 
 %typemap(in) sgx_ec256_public_t enclave_public_key {
     if (!PyBytes_Check($input)) {
