@@ -32,8 +32,9 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def handle(self):
         logging.info("Got request")
+
         client_socket = self.request
-        # data = self.rfile.readline().strip()
+
         data = client_socket.recv(1024).strip()
         logging.info("data: %r", data)
 
@@ -48,16 +49,22 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def send_msg0(self, client_socket: socket.socket):
         logging.info("Preparing to send msg0")
+
         epid = self.get_epid()
+
         msg0 = json.dumps({"EPID": epid}).encode()
+
         logging.info("Sending msg0")
         client_socket.sendall(msg0)
 
     def get_epid(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+
             self.send_epid_request(ura_socket)
+
             epid = self.receive_epid(ura_socket)
+
         return epid
 
     @staticmethod
@@ -70,9 +77,11 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def receive_epid(ura_socket: socket.socket()):
         received_raw = ura_socket.recv(1024)
         logging.debug("Received: %s" % received_raw)
+
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
         assert (len(received_json) == 1)
+
         return received_json["EPID"]
 
     # -------------------------------------------------------------------------
@@ -81,25 +90,31 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def send_msg1(self, client_socket: socket.socket):
         logging.info("Preparing to send msg1")
-        logging.debug("Attester public key: %r", ATTESTER_PUBLIC_KEY)
+
         self.ra_context = initialize_remote_attestation(attester_public_key=ATTESTER_PUBLIC_KEY, use_pse=0)
+
         public_key = get_new_public_key(self.ra_context)
         logging.info("Session public key: %r", public_key)
+
         msg1 = json.dumps({"public_key": public_key.hex()}).encode()
+
         logging.info("Sending msg1")
         client_socket.sendall(msg1)
 
     # -------------------------------------------------------------------------
-    # MSG1
+    # MSG2
     # -------------------------------------------------------------------------
 
     def receive_msg2(self, client_socket: socket.socket):
         logging.info("Waiting for msg2")
+
         received_raw = client_socket.recv(1024)
         logging.debug("Received: %s" % received_raw)
+
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
         assert (isinstance(received_json["revocation_list"], list))
+
         public_key = bytes.fromhex(received_json["public_key"])
         spid = bytes.fromhex(received_json["spid"])
         quote_type = bytes.fromhex(received_json["quote_type"])
@@ -128,9 +143,11 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def receive_qe_target_info(ura_socket: socket.socket()):
         received_raw = ura_socket.recv(2048)
         logging.debug("Received: %s" % received_raw)
+
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
         assert (len(received_json) == 1)
+
         return bytes.fromhex(received_json["qe_target_info"])
 
 

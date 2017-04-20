@@ -23,6 +23,7 @@ manager = None
 class RequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
         client_socket = self.request
+
         data = client_socket.recv(1024).strip()
         logging.info("Got request %r", data)
 
@@ -35,17 +36,24 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def send_epid(self, client_socket: socket.socket):
         logging.info("Preparing to send EPID")
+
         epid = get_extended_epid_group_id()
+
         msg = json.dumps({"EPID": epid}).encode()
+
         logging.info("Sending EPID (message size: %r)", len(msg))
         client_socket.sendall(msg)
+
         logging.info("EPID sent")
 
     def send_qe_target_info(self, client_socket: socket.socket, qe_target_info):
         logging.info("Preparing to send quoting enclave target info")
+
         msg = json.dumps({"qe_target_info": qe_target_info.hex()}).encode()
+
         logging.info("Sending quoting enclave target info (message size: %r)", len(msg))
         client_socket.sendall(msg)
+
         logging.info("Quoting enclave target info sent")
 
 
