@@ -32,7 +32,7 @@
     memcpy(&(res.reserved2), &(bytes[offset]), sizeof(res.reserved2));
     offset += sizeof(res.reserved2);
 
-    $1 = &res;
+    $1 = res;
 }
 
 %typemap(out) sgx_target_info_t target_info {
