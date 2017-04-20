@@ -31,90 +31,25 @@ extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp
 extern void initialize_remote_attestation(sgx_ec256_public_t enclave_public_key, int use_pse, sgx_ra_context_t* p_context);
 %}
 
+
 %include "cdata.i"
 %include "stdint.i"
 %include "typemaps.i"
 %include "cstring.i"
 %include "sgx_defs.h"
 
+%include "public_key.i"
+
 typedef uint32_t sgx_ra_context_t;
 
 
 extern void main();
 
-
-// ----------------------------------------------------------------------------
-// map sgx_ec256_public_t to Python bytes
-// ----------------------------------------------------------------------------
-
-// Define typemaps for sgx_ec256_public_t
-
-%typemap(in) sgx_ec256_public_t enclave_public_key {
-    if (!PyBytes_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "Expected a bytes parameter");
-        SWIG_fail;
-    }
-
-    if (PyObject_Length($input) != 64) {
-        PyErr_SetString(PyExc_ValueError, "Expected a bytes parameter with 64 elements");
-        SWIG_fail;
-    }
-
-    sgx_ec256_public_t res;
-    char* bytes = PyBytes_AsString($input);
-    int i;
-    for (i=0; i<32; i++) {
-        res.gx[i] = (uint8_t) bytes[i];
-        res.gy[i] = (uint8_t) bytes[i+32];
-    }
-
-    // Reverse byte order to big-endian
-    reverse_byte_array(res.gx, 32);
-    reverse_byte_array(res.gy, 32);
-
-    $1 = res;
-}
-
-%typemap(out) sgx_ec256_public_t enclave_public_key {
-    uint8_t tmp[64];
-    memcpy(&tmp[0], $1.gx, 32);
-    memcpy(&tmp[32], $1.gy, 32);
-
-    // Reverse byte order to big-endian
-    reverse_byte_array(&tmp[0], 32);
-    reverse_byte_array(&tmp[32], 32);
-
-    $result = PyBytes_FromStringAndSize((char*) tmp, 64);
-}
-
-
-// Define typemaps for pp_enclave_public_key
-
-// This typemap suppresses requiring the parameter as an input.
-%typemap(in,numinputs=0) sgx_ec256_public_t** pp_enclave_public_key (sgx_ec256_public_t* temp) {
-  $1 = &temp;
-}
-
-%typemap(argout) sgx_ec256_public_t** pp_enclave_public_key {
-    uint8_t tmp[64];
-    memcpy(&tmp[0], (*$1)->gx, 32);
-    memcpy(&tmp[32], (*$1)->gy, 32);
-
-    // Reverse byte order to big-endian
-    reverse_byte_array(&tmp[0], 32);
-    reverse_byte_array(&tmp[32], 32);
-
-    $result = PyBytes_FromStringAndSize((char*) tmp, 64);
-}
-
-
-// Declare functions which use the public key typemaps
-
+%apply sgx_ec256_public_t** pp_public_key { sgx_ec256_public_t** pp_enclave_public_key };
 extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key);
 
+%apply sgx_ec256_public_t public_key { sgx_ec256_public_t enclave_public_key };
 %apply uint32_t* OUTPUT { sgx_ra_context_t* p_context };
 extern void initialize_remote_attestation(sgx_ec256_public_t enclave_public_key, int use_pse, sgx_ra_context_t* p_context);
 
 %include "sgx_tcrypto.h"
-
-// ----------------------------------------------------------------------------

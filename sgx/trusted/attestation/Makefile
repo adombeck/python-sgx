@@ -9,6 +9,7 @@ include $(PROJECT_HOME)/Makefile.config
 
 SDK_LIB = $(SDK)/lib64
 LIB = $(PROJECT_HOME)/lib
+SWIG_LIB = $(LIB)/swig
 
 LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
 
@@ -20,7 +21,7 @@ $(NAME).i:
 	chmod 444 $(NAME).i
 
 $(NAME)_wrap.c: $(NAME).i
-	swig -Werror -python -I$(SDK)/include $<
+	swig -Werror -python -I$(SDK)/include -I$(SWIG_LIB) $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
 	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl

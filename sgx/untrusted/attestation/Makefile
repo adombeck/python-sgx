@@ -10,6 +10,7 @@ include $(PROJECT_HOME)/Makefile.config
 SDK_LIB = $(SDK)/lib64
 LIB = $(PROJECT_HOME)/lib
 UTILS = $(PROJECT_HOME)/utils
+SWIG_LIB = $(LIB)/swig
 
 SRC = $(LIB)/memset_s.c $(LIB)/rdrand.c $(LIB)/sgx_aes_gcm.cpp $(LIB)/sgx_create_report.cpp $(LIB)/sgx_get_key.cpp $(LIB)/sgx_read_rand.cpp $(LIB)/trts.c $(LIB)/trts_pic.S
 
@@ -24,7 +25,7 @@ $(NAME).i:
 	chmod 444 $(NAME).i
 
 $(NAME)_wrap.c: $(NAME).i
-	swig -python -I$(SDK)/include $<
+	swig -python -I$(SDK)/include -I$(SWIG_LIB) $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
 	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
