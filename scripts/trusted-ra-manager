@@ -110,11 +110,28 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         # report = process_msg2(self.ra_context, msg2, qe_target_info)
 
-        self.send_qe_init_request()
+        self.initialize_quoting_enclave()
 
-    def send_qe_init_request(self):
-        pass
+    def initialize_quoting_enclave(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
+            ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+            self.send_qe_init_request(ura_socket)
+            self.qe_target_info = self.receive_qe_target_info(ura_socket)
 
+    @staticmethod
+    def send_qe_init_request(ura_socket: socket.socket):
+        logging.info("Sending quoting enclave initialization request")
+        ura_socket.sendall(b"init_quote")
+        logging.info("Quoting enclave initialization request sent")
+
+    @staticmethod
+    def receive_qe_target_info(ura_socket: socket.socket()):
+        received_raw = ura_socket.recv(2048)
+        logging.debug("Received: %s" % received_raw)
+        received_json = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(received_json, dict))
+        assert (len(received_json) == 1)
+        return bytes.fromhex(received_json["qe_target_info"])
 
 
 class Manager(object):

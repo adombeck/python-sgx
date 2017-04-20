@@ -8,7 +8,7 @@ import json
 import logging
 
 try:
-    from sgx.untrusted.attestation import get_extended_epid_group_id
+    from sgx.untrusted.attestation import get_extended_epid_group_id, initialize_quoting_enclave
 except ImportError as e:
     print(traceback.format_exc(), file=sys.stderr)
     exit()
@@ -30,18 +30,23 @@ class RequestHandler(socketserver.StreamRequestHandler):
             self.send_epid(client_socket)
 
         if data == b"init_quote":
-            self.init_quote()
+            qe_target_info = initialize_quoting_enclave()
+            self.send_qe_target_info(client_socket, qe_target_info)
 
     def send_epid(self, client_socket: socket.socket):
         logging.info("Preparing to send EPID")
         epid = get_extended_epid_group_id()
         msg = json.dumps({"EPID": epid}).encode()
-        logging.info("Sending EPID")
+        logging.info("Sending EPID (message size: %r)", len(msg))
         client_socket.sendall(msg)
         logging.info("EPID sent")
 
-    def init_quote(self):
-        pass
+    def send_qe_target_info(self, client_socket: socket.socket, qe_target_info):
+        logging.info("Preparing to send quoting enclave target info")
+        msg = json.dumps({"qe_target_info": qe_target_info.hex()}).encode()
+        logging.info("Sending quoting enclave target info (message size: %r)", len(msg))
+        client_socket.sendall(msg)
+        logging.info("Quoting enclave target info sent")
 
 
 class Manager(object):
