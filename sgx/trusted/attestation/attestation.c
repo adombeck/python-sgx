@@ -63,11 +63,10 @@ void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, s
 
 void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key)
 {
-    sgx_ec256_public_t* tmp1 = malloc(sizeof(sgx_ec256_public_t));
-    sgx_ec256_public_t* tmp2 = malloc(sizeof(sgx_ec256_public_t));
-    // XXX: Test if tmp2 is Null
+    sgx_ec256_public_t* tmp = malloc(sizeof(sgx_ec256_public_t));
+    // XXX: Test if tmp is Null
 
-    sgx_status_t ret = sgx_ra_get_ga(context, tmp1);
+    sgx_status_t ret = sgx_ra_get_ga(context, tmp);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
@@ -75,10 +74,7 @@ void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclav
         return;
     }
 
-    memcpy(tmp2->gx, tmp1->gx, sizeof(tmp2->gx));
-    memcpy(tmp2->gy, tmp1->gy, sizeof(tmp2->gy));
-    *pp_enclave_public_key = tmp2;
-    free(tmp1);
+    *pp_enclave_public_key = tmp;
 
     fprintf(stderr, "Successfully generated session key pair\n");
     print_public_key(**pp_enclave_public_key);

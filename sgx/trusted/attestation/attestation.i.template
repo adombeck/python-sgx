@@ -96,7 +96,6 @@ extern void main();
 }
 
 %typemap(argout) sgx_ec256_public_t** pp_enclave_public_key {
-    #$result = SWIG_NewPointerObj(*$1, $descriptor(sgx_ec256_public_t*), SWIG_POINTER_OWN);
     uint8_t tmp[64];
     memcpy(&tmp[0], (*$1)->gx, 32);
     memcpy(&tmp[32], (*$1)->gy, 32);
