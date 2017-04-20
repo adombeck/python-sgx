@@ -34,7 +34,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
             qe_target_info = initialize_quoting_enclave()
             self.send_qe_target_info(client_socket, qe_target_info)
 
-    def send_epid(self, client_socket: socket.socket):
+    @staticmethod
+    def send_epid(client_socket: socket.socket):
         logging.info("Preparing to send EPID")
 
         epid = get_extended_epid_group_id()
@@ -46,7 +47,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         logging.info("EPID sent")
 
-    def send_qe_target_info(self, client_socket: socket.socket, qe_target_info):
+    @staticmethod
+    def send_qe_target_info(client_socket: socket.socket, qe_target_info):
         logging.info("Preparing to send quoting enclave target info")
 
         msg = json.dumps({"qe_target_info": qe_target_info.hex()}).encode()
