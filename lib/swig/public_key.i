@@ -11,19 +11,17 @@
     }
 
     if (PyObject_Length($input) != 64) {
-        PyErr_SetString(PyExc_ValueError, "Expected a bytes parameter with 64 elements");
+        PyErr_SetString(PyExc_ValueError, "Public key must be 64 bytes");
         SWIG_fail;
     }
 
     sgx_ec256_public_t res;
     char* bytes = PyBytes_AsString($input);
-    int i;
-    for (i=0; i<32; i++) {
-        res.gx[i] = (uint8_t) bytes[i];
-        res.gy[i] = (uint8_t) bytes[i+32];
-    }
 
-    // Reverse byte order to big-endian
+    memcpy(res.gx, &bytes[0], 32);
+    memcpy(res.gy, &bytes[32], 32);
+
+    // Reverse byte order to little-endian
     reverse_byte_array(res.gx, 32);
     reverse_byte_array(res.gy, 32);
 
