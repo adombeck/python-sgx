@@ -47,8 +47,6 @@ void PRINT_BYTE_ARRAY(void *mem, uint32_t len)
 }
 
 
-
-
 void print_public_key(sgx_ec256_public_t public_key)
 {
     int i;
@@ -113,7 +111,8 @@ void process_msg2(sgx_ra_context_t context,
                   sgx_mac_t mac,
                   uint32_t revocation_list_size,
                   char* revocation_list,
-                  sgx_report_t* p_report
+                  sgx_report_t* p_report,
+                  sgx_quote_nonce_t* p_nonce
                   )
 {
 //    sgx_ra_msg2_t msg2 = {
@@ -155,10 +154,7 @@ void process_msg2(sgx_ra_context_t context,
     fprintf(stderr, "Authenticated bytes:\n");
     PRINT_BYTE_ARRAY((uint8_t*) &msg2.g_b, 148);
 
-    sgx_quote_nonce_t nonce;
-    memset(&nonce, 0, sizeof(nonce));
-
-    sgx_status_t ret = sgx_ra_proc_msg2_trusted(context, &msg2, &qe_target_info, p_report, &nonce);
+    sgx_status_t ret = sgx_ra_proc_msg2_trusted(context, &msg2, &qe_target_info, p_report, p_nonce);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
