@@ -33,7 +33,7 @@ extern void process_msg2(
     sgx_mac_t mac,
     uint32_t revocation_list_size,
     char* revocation_list,
-    char* p_report
+    sgx_report_t* p_report
 );
 
 %}
@@ -50,6 +50,7 @@ extern void process_msg2(
 %include "spid.i"
 %include "signature.i"
 %include "mac.i"
+%include "report.i"
 
 
 extern void main();
@@ -71,7 +72,7 @@ extern void initialize_remote_attestation(sgx_ec256_public_t enclave_public_key,
 %apply sgx_ec256_signature_t signature { sgx_ec256_signature_t key_signature };
 %apply sgx_mac_t mac { sgx_mac_t mac };
 %apply (char* STRING, size_t LENGTH) { (char* revocation_list, uint32_t revocation_list_size) };
-%cstring_chunk_output(char* p_report, sizeof(sgx_report_t));
+%apply sgx_report_t* p_report { sgx_report_t* p_report };
 
 extern void process_msg2(
     sgx_ra_context_t context,
@@ -84,7 +85,7 @@ extern void process_msg2(
     sgx_mac_t mac,
     uint32_t revocation_list_size,
     char* revocation_list,
-    char* p_report
+    sgx_report_t* p_report
 );
 
 %include "sgx_tcrypto.h"

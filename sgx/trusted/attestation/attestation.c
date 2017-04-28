@@ -113,7 +113,7 @@ void process_msg2(sgx_ra_context_t context,
                   sgx_mac_t mac,
                   uint32_t revocation_list_size,
                   char* revocation_list,
-                  char* p_report
+                  sgx_report_t* p_report
                   )
 {
 //    sgx_ra_msg2_t msg2 = {
@@ -158,7 +158,7 @@ void process_msg2(sgx_ra_context_t context,
     sgx_quote_nonce_t nonce;
     memset(&nonce, 0, sizeof(nonce));
 
-    sgx_status_t ret = sgx_ra_proc_msg2_trusted(context, &msg2, &qe_target_info, (sgx_report_t*) p_report, &nonce);
+    sgx_status_t ret = sgx_ra_proc_msg2_trusted(context, &msg2, &qe_target_info, p_report, &nonce);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
