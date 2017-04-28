@@ -11,6 +11,9 @@ RUNTIME = os.path.join(GRAPHENE_DIR, "Runtime")
 
 manifest_templates = glob.glob("*.manifest.template")
 
+if not manifest_templates:
+    sys.exit("Cannot find manifest.template in current directory")
+
 for manifest_template in manifest_templates:
     manifest = manifest_template[:-9]
     with open(manifest_template) as f_template:

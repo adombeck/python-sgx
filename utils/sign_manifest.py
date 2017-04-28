@@ -43,6 +43,9 @@ def create_token(manifest):
     
 
 def main():
+    if not manifests:
+        sys.exit("Cannot find manifest in current directory")
+
     for manifest in manifests:
         sign_manifest(manifest)
         create_token(manifest)
