@@ -29,6 +29,26 @@ static sgx_ec256_public_t g_sp_pub_key = {
 };
 
 
+// Took this from the Intel SGX SDK's RemoteAttestation app
+void PRINT_BYTE_ARRAY(void *mem, uint32_t len)
+{
+    if(!mem || !len)
+    {
+        fprintf(stderr, "\n( null )\n");
+        return;
+    }
+    uint8_t *array = (uint8_t *)mem;
+    uint32_t i = 0;
+    for(i = 0; i < len; i++)
+    {
+        fprintf(stderr, "%02x", array[i]);
+    }
+    fprintf(stderr, "\n");
+}
+
+
+
+
 void print_public_key(sgx_ec256_public_t public_key)
 {
     int i;
@@ -48,7 +68,7 @@ void print_public_key(sgx_ec256_public_t public_key)
 
 void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, sgx_ra_context_t* p_context)
 {
-    fprintf(stderr, "initializing remote attestation with public_key:\n");
+    fprintf(stderr, "initializing remote attestation with attester public_key:\n");
     print_public_key(public_key);
     sgx_status_t ret = sgx_ra_init(&public_key, use_pse, p_context);
     if(ret != SGX_SUCCESS)
@@ -64,9 +84,11 @@ void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, s
 void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key)
 {
     sgx_ec256_public_t* tmp = malloc(sizeof(sgx_ec256_public_t));
+    sgx_ec256_private_t* p_privkey = malloc(sizeof(sgx_ec256_private_t));
+
     // XXX: Test if tmp is Null
 
-    sgx_status_t ret = sgx_ra_get_ga(context, tmp);
+    sgx_status_t ret = sgx_ra_get_ga(context, tmp, p_privkey);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
@@ -77,7 +99,77 @@ void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclav
     *pp_enclave_public_key = tmp;
 
     fprintf(stderr, "Successfully generated session key pair\n");
+    fprintf(stderr, "Enclave public key (g_a):\n");
     print_public_key(**pp_enclave_public_key);
+
+    fprintf(stderr, "Enclave private key (a):\n");
+    PRINT_BYTE_ARRAY(p_privkey, sizeof(*p_privkey));
+}
+
+void process_msg2(sgx_ra_context_t context,
+                  sgx_target_info_t qe_target_info,
+                  sgx_ec256_public_t public_key,
+                  sgx_spid_t spid,
+                  uint16_t quote_type,
+                  uint16_t kdf_id,
+                  sgx_ec256_signature_t key_signature,
+                  sgx_mac_t mac,
+                  uint32_t revocation_list_size,
+                  char* revocation_list,
+                  char* p_report
+                  )
+{
+//    sgx_ra_msg2_t msg2 = {
+//        .g_b = public_key,
+//        .spid = spid,
+//        .quote_type = quote_type,
+//        .kdf_id = kdf_id,
+//        .sign_gb_ga = key_signature,
+//        .mac = mac,
+//        .sig_rl_size = revocation_list_size,
+//        .sig_rl = revocation_list,
+//    };
+
+    fprintf(stderr, "g_b in process_msg2():\n");
+    PRINT_BYTE_ARRAY(&public_key, sizeof(sgx_ec256_public_t));
+
+    fprintf(stderr, "sign_gb_ga.r in process_msg2():\n");
+    PRINT_BYTE_ARRAY(&key_signature.x, 32);
+
+    fprintf(stderr, "sign_gb_ga.s in process_msg2():\n");
+    PRINT_BYTE_ARRAY(&key_signature.y, 32);
+
+    fprintf(stderr, "MAC in process_msg2():\n");
+    PRINT_BYTE_ARRAY(mac, 16);
+
+    fprintf(stderr, "QE target info in process_msg2():\n");
+    PRINT_BYTE_ARRAY(&qe_target_info, sizeof(sgx_target_info_t));
+
+    sgx_ra_msg2_t msg2;
+    msg2.g_b = public_key;
+    msg2.spid = spid;
+    msg2.quote_type = quote_type;
+    msg2.kdf_id = kdf_id;
+    msg2.sign_gb_ga = key_signature;
+    memcpy(msg2.mac, mac, sizeof(msg2.mac));
+    msg2.sig_rl_size = revocation_list_size;
+    memcpy(msg2.sig_rl, revocation_list, msg2.sig_rl_size);
+
+    fprintf(stderr, "Authenticated bytes:\n");
+    PRINT_BYTE_ARRAY((uint8_t*) &msg2.g_b, 148);
+
+    sgx_quote_nonce_t nonce;
+    memset(&nonce, 0, sizeof(nonce));
+
+    sgx_status_t ret = sgx_ra_proc_msg2_trusted(context, &msg2, &qe_target_info, (sgx_report_t*) p_report, &nonce);
+    if(ret != SGX_SUCCESS)
+    {
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
+        fprintf(stderr, "Failed to call sgx_ra_proc_msg2_trusted. Error code: 0x%x\n", ret);
+        return;
+    }
+
+    fprintf(stderr, "Successfully processed msg2\n");
 }
 
 int main()
