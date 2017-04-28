@@ -5,6 +5,8 @@ all: $(SO_NAME)
 
 PROJECT_HOME = ../../..
 
+UTILS = $(PROJECT_HOME)/utils
+
 include $(PROJECT_HOME)/Makefile.config
 
 SDK_LIB = $(SDK)/lib64
@@ -24,13 +26,13 @@ $(NAME)_wrap.c: $(NAME).i
 	swig -Werror -python -I$(SDK)/include -I$(SWIG_LIB) $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
-	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
+	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I$(SWIG_LIB) -I/usr/include/python3.5 -ldl
 
 $(NAME).o: $(NAME).c
-	gcc -Wall -Werror -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
+	gcc -Wall -Werror -fPIC -c $^ $(INCLUDES) -I/usr/include/python3.5 -Wl,--verbose
 
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
-	gcc -g -Wall -Werror  -shared $^ -o $@ \
+	gcc -g -Wall -Werror  -shared $^ -o $@ -Wl,--verbose \
 		-I$(SDK)/include \
 		-I/usr/include/python3.5 \
 		-shared-libgcc \
@@ -53,7 +55,7 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 call_tables.o: call_tables.c
 	gcc -g -Wall -Werror  -fPIC -c $^ -iquote$(SDK)/include/tlibc -I$(SDK)/include
 
-exec: $(NAME).o call_tables.o
+exec: $(NAME).o call_tables.o 
 	gcc -g -Wall -Werror  $^ -o $@ \
 		-I$(SDK)/include \
 		-I/usr/include/python3.5 \
@@ -73,6 +75,10 @@ exec: $(NAME).o call_tables.o
 		-Wl,--defsym,__ImageBase=0 \
 		-Wl,--allow-multiple-definition \
 		-Wl,-Bdynamic -lsgx_uae_service -lsgx_ukey_exchange
+
+	$(UTILS)/create_manifest.py
+	$(UTILS)/sign_manifest.py
+
 
 .PHONY: clean
 clean:
