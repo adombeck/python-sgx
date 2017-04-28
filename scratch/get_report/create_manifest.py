@@ -3,7 +3,7 @@
 import glob
 import os
 
-from config import GRAPHENE_DIR
+from sgx.config import GRAPHENE_DIR
 
 SHIMPATH = os.path.join(GRAPHENE_DIR, "LibOS/shim/src/libsysdb.so")
 LIBCDIR = os.path.join(GRAPHENE_DIR, "LibOS/glibc-build")

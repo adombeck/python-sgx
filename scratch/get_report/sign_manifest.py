@@ -4,7 +4,7 @@ import glob
 import os
 import subprocess
 
-from config import GRAPHENE_DIR
+from sgx.config import GRAPHENE_DIR
 
 SGX_SIGN = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/pal-sgx-sign")
 SGX_GET_TOKEN = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/pal-sgx-get-token")

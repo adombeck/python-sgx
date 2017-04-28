@@ -25,6 +25,21 @@ static sgx_ec256_public_t remote_party_public_key = {
 
 };
 
+void print_public_key(sgx_ec256_public_t public_key)
+{
+    int i;
+
+    fprintf(stderr, "public_key.gx: ");
+    for(i = 0; i < 32; i++)
+        fprintf(stderr, "%02hhx", public_key.gx[i]);
+    fprintf(stderr, "\n");
+
+    fprintf(stderr, "public_key.gy: ");
+    for(i = 0; i < 32; i++)
+        fprintf(stderr, "%02hhx", public_key.gy[i]);
+    fprintf(stderr, "\n");
+}
+
 void initialize_remote_attestation(sgx_ec256_public_t* p_remote_party_public_key, int use_pse, sgx_ra_context_t* p_context)
 {
     sgx_status_t ret = sgx_ra_init(p_remote_party_public_key, use_pse, p_context);
@@ -47,21 +62,7 @@ void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_
         return;
     }
     fprintf(stderr, "Successfully generated session key pair\n");
-}
-
-void print_public_key(sgx_ec256_public_t public_key)
-{
-    int i;
-
-    fprintf(stderr, "public_key.gx: ");
-    for(i = 0; i < 32; i++)
-        fprintf(stderr, "%02hhx", public_key.gx[i]);
-    fprintf(stderr, "\n");
-
-    fprintf(stderr, "public_key.gy: ");
-    for(i = 0; i < 32; i++)
-        fprintf(stderr, "%02hhx", public_key.gy[i]);
-    fprintf(stderr, "\n");
+    print_public_key(*p_enclave_public_key);
 }
 
 int main()
