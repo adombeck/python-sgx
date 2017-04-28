@@ -28,7 +28,8 @@
 
 // This typemap suppresses requiring the parameter as an input.
 %typemap(in,numinputs=0) sgx_target_info_t* p_target_info (sgx_target_info_t temp) {
-  $1 = &temp;
+    memset(&temp, 0, sizeof(sgx_target_info_t));
+    $1 = &temp;
 }
 
 %typemap(argout) sgx_target_info_t* p_target_info {

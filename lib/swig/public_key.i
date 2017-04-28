@@ -43,7 +43,8 @@
 
 // This typemap suppresses requiring the parameter as an input.
 %typemap(in,numinputs=0) sgx_ec256_public_t* p_public_key (sgx_ec256_public_t temp) {
-  $1 = &temp;
+    memset(&temp, 0, sizeof(sgx_ec256_public_t));
+    $1 = &temp;
 }
 
 %typemap(argout) sgx_ec256_public_t* p_public_key {
