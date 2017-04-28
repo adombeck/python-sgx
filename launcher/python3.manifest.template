@@ -26,6 +26,10 @@ fs.mount.usr.type = chroot
 fs.mount.usr.path = /usr
 fs.mount.usr.uri = file:/usr
 
+fs.mount.config.type = chroot
+fs.mount.config.path = /etc/python-sgx
+fs.mount.config.uri = file:/etc/python-sgx
+
 net.allow_bind.1 = 127.0.0.1:6789
 
 sys.stack.size = 256K
@@ -42,10 +46,12 @@ sgx.trusted_files.libz = file:/lib/x86_64-linux-gnu/libz.so.1
 sgx.trusted_files.libexpat = file:/lib/x86_64-linux-gnu/libexpat.so.1
 
 # for attestation
+sgx.trusted_files.trusted_ra_manager = file:/usr/local/bin/trusted-ra-manager
 sgx.trusted_files.libsgx_uae_service = file:/usr/lib/libsgx_uae_service.so
 sgx.trusted_files.libprotopuf = file:/usr/lib/x86_64-linux-gnu/libprotobuf.so.$(LIBPROTOBUF_VERSION)
 sgx.trusted_files.libstdcpp = file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
+sgx.trusted_files.attester_public_key = file:/etc/python-sgx/attester_public.key
 
 sgx.allowed_files.pyhome = file:/usr/lib/python$(PYTHON_VERSION)
 sgx.allowed_files.pyhome_local = file:/usr/local/lib/python$(PYTHON_VERSION)

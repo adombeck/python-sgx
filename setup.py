@@ -9,13 +9,15 @@ https://github.com/pypa/sampleproject
 import os
 import sh
 import subprocess
+import platform
 # To use a consistent encoding
 from codecs import open
 from distutils.version import LooseVersion
 
 from setuptools import setup, find_packages
 
-from sgx import config
+import importlib
+config = importlib.import_module("sgx.config")
 
 # Check if swig >= 3.0.10 is installed
 out = sh.grep(sh.dpkg("-s", "swig", "swig3.0", _ok_code=[0,1]), '^Version:')
@@ -50,9 +52,6 @@ sh.install("-m", "755", "-d", config.KEY_DIR)
 # Create data directory
 sh.install("-m", "755", "-d", config.DATA_DIR)
 
-# Copy python3 launcher to data directory
-sh.cp("launcher/python3.manifest.sgx", config.DATA_DIR)
-sh.cp("launcher/python3.sig", config.DATA_DIR)
 
 dist = setup(
     name='sgx',
@@ -105,7 +104,6 @@ dist = setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     scripts=["scripts/python3-sgx",
-             "scripts/trusted-ra-manager",
              "scripts/untrusted-ra-manager"],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
@@ -150,16 +148,22 @@ dist = setup(
     # },
 )
 
-# Set PROJECT_GIT_DIR in config.py
-project_git_dir = os.path.realpath(os.path.dirname(__file__))
+# Copy trusted-ra-manager to /usr/local/bin/, because if included in `scripts`, setup() creates a script which uses
+# run_script() to execute the actual script, thereby ignoring our custom shebang to run python3-sgx.
+sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
 
+
+# Set PROJECT_GIT_DIR in config.py
 lib_dir = dist.command_obj['install'].install_lib
 config_vars = dist.command_obj['install'].config_vars
 install_dir = os.path.join(lib_dir, "%s-py%s.egg" % (config_vars['dist_fullname'], config_vars['py_version_short']))
 config_path = os.path.join(install_dir, "sgx", "config.py")
 print("config_path: %r" % config_path)
+
 with open(config_path) as config_file:
     original_config = config_file.readlines()
+
+project_git_dir = os.path.realpath(os.path.dirname(__file__))
 
 with open(config_path, "w+") as config_file:
     for line in original_config:
@@ -168,3 +172,13 @@ with open(config_path, "w+") as config_file:
         else:
             config_file.write(line)
 
+
+# Create python3 launcher in data directory
+sh.cp("launcher/python3.manifest.template", config.DATA_DIR)
+create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
+sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
+cwd = os.getcwd()
+os.chdir(config.DATA_DIR)
+create_manifest()
+sign_manifest()
+os.chdir(cwd)
