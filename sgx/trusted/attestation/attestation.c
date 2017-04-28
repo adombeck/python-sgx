@@ -81,14 +81,13 @@ void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, s
 }
 
 
-void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key)
+void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key)
 {
-    sgx_ec256_public_t* tmp = malloc(sizeof(sgx_ec256_public_t));
     sgx_ec256_private_t* p_privkey = malloc(sizeof(sgx_ec256_private_t));
 
     // XXX: Test if tmp is Null
 
-    sgx_status_t ret = sgx_ra_get_ga(context, tmp, p_privkey);
+    sgx_status_t ret = sgx_ra_get_ga(context, p_enclave_public_key, p_privkey);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
@@ -96,11 +95,9 @@ void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclav
         return;
     }
 
-    *pp_enclave_public_key = tmp;
-
     fprintf(stderr, "Successfully generated session key pair\n");
     fprintf(stderr, "Enclave public key (g_a):\n");
-    print_public_key(**pp_enclave_public_key);
+    print_public_key(*p_enclave_public_key);
 
     fprintf(stderr, "Enclave private key (a):\n");
     PRINT_BYTE_ARRAY(p_privkey, sizeof(*p_privkey));
@@ -184,9 +181,9 @@ int main()
     sgx_ra_context_t context = INT_MAX;
     initialize_remote_attestation(g_sp_pub_key, 0, &context);
 
-    sgx_ec256_public_t* p_enclave_public_key;
-    get_new_public_key(context, &p_enclave_public_key);
-    print_public_key(*p_enclave_public_key);
+    sgx_ec256_public_t enclave_public_key;
+    get_new_public_key(context, &enclave_public_key);
+    print_public_key(enclave_public_key);
 
     return 0;
 }

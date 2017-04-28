@@ -19,7 +19,7 @@ typedef uint32_t sgx_ra_context_t;
 
 extern void main();
 
-extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key);
+extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key);
 extern void initialize_remote_attestation(sgx_ec256_public_t enclave_public_key, int use_pse, sgx_ra_context_t* p_context);
 
 extern void process_msg2(
@@ -56,8 +56,8 @@ extern void main();
 
 
 %apply uint32_t { sgx_ra_context_t context };
-%apply sgx_ec256_public_t** pp_public_key { sgx_ec256_public_t** pp_enclave_public_key };
-extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t** pp_enclave_public_key);
+%apply sgx_ec256_public_t* p_public_key { sgx_ec256_public_t* p_enclave_public_key };
+extern void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key);
 
 
 %apply uint32_t* OUTPUT { sgx_ra_context_t* p_context };

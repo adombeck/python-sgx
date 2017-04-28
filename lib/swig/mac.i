@@ -15,9 +15,7 @@
         SWIG_fail;
     }
 
-    uint8_t* bytes = (uint8_t*) PyBytes_AsString($input);
-
-    memcpy($1, bytes, 16);
+    memcpy($1, PyBytes_AsString($input), 16);
 
     // Reverse byte order to little-endian
     reverse_byte_array($1, 16);

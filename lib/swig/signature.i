@@ -15,15 +15,11 @@
         SWIG_fail;
     }
 
-    sgx_ec256_signature_t res;
     uint8_t* bytes = (uint8_t*) PyBytes_AsString($input);
 
-    memcpy(res.x, &bytes[0], 32);
-    memcpy(res.y, &bytes[32], 32);
-
     // Reverse byte order to little-endian
-    reverse_byte_array((uint8_t*) res.x, 32);
-    reverse_byte_array((uint8_t*) res.y, 32);
+    reverse_byte_array(&bytes[0], 32);
+    reverse_byte_array(&bytes[32], 32);
 
-    $1 = res;
+    memcpy(&$1, bytes, sizeof(sgx_ec256_signature_t));
 }

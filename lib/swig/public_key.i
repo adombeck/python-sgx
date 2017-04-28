@@ -5,27 +5,25 @@
 // Define typemaps for sgx_ec256_public_t
 
 %typemap(in) sgx_ec256_public_t public_key {
+    assert(sizeof(sgx_ec256_public_t) == 64);
+
     if (!PyBytes_Check($input)) {
         PyErr_SetString(PyExc_TypeError, "Expected a bytes parameter");
         SWIG_fail;
     }
 
-    if (PyObject_Length($input) != 64) {
-        PyErr_SetString(PyExc_ValueError, "Public key must be 64 bytes");
+    if (PyObject_Length($input) != sizeof(sgx_ec256_public_t)) {
+        PyErr_SetString(PyExc_ValueError, "Expected a bytes parameter with 64 elements");
         SWIG_fail;
     }
 
-    sgx_ec256_public_t res;
-    char* bytes = PyBytes_AsString($input);
-
-    memcpy(res.gx, &bytes[0], 32);
-    memcpy(res.gy, &bytes[32], 32);
+    uint8_t* bytes = (uint8_t*) PyBytes_AsString($input);
 
     // Reverse byte order to little-endian
-    reverse_byte_array(res.gx, 32);
-    reverse_byte_array(res.gy, 32);
+    reverse_byte_array(&bytes[0], 32);
+    reverse_byte_array(&bytes[32], 32);
 
-    $1 = res;
+    memcpy(&$1, bytes, sizeof(sgx_ec256_public_t));
 }
 
 %typemap(out) sgx_ec256_public_t public_key {
@@ -41,17 +39,17 @@
 }
 
 
-// Define typemaps for pp_public_key
+// Define typemaps for p_public_key
 
 // This typemap suppresses requiring the parameter as an input.
-%typemap(in,numinputs=0) sgx_ec256_public_t** pp_public_key (sgx_ec256_public_t* temp) {
+%typemap(in,numinputs=0) sgx_ec256_public_t* p_public_key (sgx_ec256_public_t temp) {
   $1 = &temp;
 }
 
-%typemap(argout) sgx_ec256_public_t** pp_public_key {
+%typemap(argout) sgx_ec256_public_t* p_public_key {
     uint8_t tmp[64];
-    memcpy(&tmp[0], (*$1)->gx, 32);
-    memcpy(&tmp[32], (*$1)->gy, 32);
+    memcpy(&tmp[0], $1->gx, 32);
+    memcpy(&tmp[32], $1->gy, 32);
 
     // Reverse byte order to big-endian
     reverse_byte_array(&tmp[0], 32);

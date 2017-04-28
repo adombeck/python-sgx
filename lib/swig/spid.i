@@ -15,10 +15,5 @@
         SWIG_fail;
     }
 
-    sgx_spid_t res;
-    char* bytes = PyBytes_AsString($input);
-
-    memcpy(&(res), bytes, sizeof(sgx_spid_t));
-
-    $1 = res;
+    memcpy(&$1, PyBytes_AsString($input), sizeof(sgx_spid_t));
 }
