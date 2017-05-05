@@ -3,18 +3,15 @@
 import glob
 import os
 import subprocess
+import sys
 import argparse
 
-import sys 
-sys.path.append('..')
-from sgx.config import GRAPHENE_DIR
-
+DIR = os.path.dirname(__file__)
+GRAPHENE_DIR = os.path.abspath(os.path.join(DIR, "../graphene/"))
 SGX_SIGN = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/pal-sgx-sign")
 SGX_GET_TOKEN = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/pal-sgx-get-token")
 LIBPAL = os.path.join(GRAPHENE_DIR, "Pal/src/libpal-enclave.so")
 KEY = os.path.join(GRAPHENE_DIR, "Pal/src/host/Linux-SGX/signer/enclave-key.pem")
-
-manifests = glob.glob("*.manifest")
 
 
 def execute(command):
@@ -40,11 +37,31 @@ def create_token(manifest):
                "-output", token,
                "-sig", sig]
     execute(command)
-    
+
+
+def get_manifests(path):
+    manifests = glob.glob(path + "/*.manifest")
+    if not manifests:
+        sys.exit("Cannot find manifest in directory %r" % path)
+    return manifests
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("PATH", nargs='?', default=".", help="Path to the manifest file or the directory containing the manifest files")
+    return parser.parse_args()
+
 
 def main():
-    if not manifests:
-        sys.exit("Cannot find manifest in current directory")
+    args = parse_args()
+    path = os.path.abspath(args.PATH)
+
+    if path.endswith(".manifest"):
+        if not os.path.isfile(path):
+            sys.exit("Cannot find file %r" % path)
+        manifests = [path]
+    else:
+        manifests = get_manifests(path)
 
     for manifest in manifests:
         sign_manifest(manifest)

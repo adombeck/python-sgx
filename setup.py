@@ -19,6 +19,9 @@ from setuptools import setup, find_packages
 import importlib
 config = importlib.import_module("sgx.config")
 
+GRAPHENE_DIR = "./graphene/"
+
+
 # Check if swig >= 3.0.10 is installed
 out = sh.grep(sh.dpkg("-s", "swig", "swig3.0", _ok_code=[0,1]), '^Version:')
 version = out.split(" ")[-1].split("-")[0]
@@ -37,21 +40,38 @@ except sh.ErrorReturnCode_1:
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-# Get the long description from the README file
-with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
-    long_description = f.read()
 
 # Link graphene's pal launcher to /usr/bin/graphene-pal
 pal = "/usr/bin/graphene-pal"
 if not os.path.islink(pal):
-    subprocess.check_call(["ln", "-s", os.path.join(config.GRAPHENE_DIR, "Runtime/pal-Linux-SGX"), pal])
+    subprocess.check_call(["ln", "-s", os.path.join(GRAPHENE_DIR, "Runtime/pal-Linux-SGX"), pal])
 
-# Create key directory
+
+# Create the key directory
 sh.install("-m", "755", "-d", config.KEY_DIR)
 
-# Create data directory
+
+# Create the data directory
 sh.install("-m", "755", "-d", config.DATA_DIR)
 
+
+# Copy trusted-ra-manager to `/usr/local/bin/`.
+# If trusted-ra-manager is included in the `scripts` argument to setup(), setup() creates a script
+# which uses run_script() to execute the actual script, thereby ignoring our custom shebang to run python3-sgx.
+sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
+
+
+# Create python3 launcher in the data directory
+sh.cp("launcher/python3.manifest.template", config.DATA_DIR)
+create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
+sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
+create_manifest(config.DATA_DIR)
+sign_manifest(config.DATA_DIR)
+
+
+# Get the long description from the README file
+with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
 
 dist = setup(
     name='sgx',
@@ -147,38 +167,3 @@ dist = setup(
     #     ],
     # },
 )
-
-# Copy trusted-ra-manager to /usr/local/bin/, because if included in `scripts`, setup() creates a script which uses
-# run_script() to execute the actual script, thereby ignoring our custom shebang to run python3-sgx.
-sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
-
-
-# Set PROJECT_GIT_DIR in config.py
-lib_dir = dist.command_obj['install'].install_lib
-config_vars = dist.command_obj['install'].config_vars
-install_dir = os.path.join(lib_dir, "%s-py%s.egg" % (config_vars['dist_fullname'], config_vars['py_version_short']))
-config_path = os.path.join(install_dir, "sgx", "config.py")
-print("config_path: %r" % config_path)
-
-with open(config_path) as config_file:
-    original_config = config_file.readlines()
-
-project_git_dir = os.path.realpath(os.path.dirname(__file__))
-
-with open(config_path, "w+") as config_file:
-    for line in original_config:
-        if line.startswith("PROJECT_GIT_DIR = "):
-            config_file.write("PROJECT_GIT_DIR = \"%s\"\n" % project_git_dir)
-        else:
-            config_file.write(line)
-
-
-# Create python3 launcher in data directory
-sh.cp("launcher/python3.manifest.template", config.DATA_DIR)
-create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
-sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
-cwd = os.getcwd()
-os.chdir(config.DATA_DIR)
-create_manifest()
-sign_manifest()
-os.chdir(cwd)
