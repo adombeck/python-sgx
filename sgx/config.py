@@ -9,4 +9,6 @@ LIBPROTOBUF_VERSION = "8" if UBUNTU_VERSION == "14.04" else "9"
 # Currently we require Python 3.5. Install it with `apt install python3.5` on Ubuntu 14.04.
 PYTHON_VERSION = "3.5"
 
-OPENSSL_ELLIPTIC_CURVE = "secp384r1"  # Use NIST curve P-384 (required by Intel's SGX SDK)
+# Use NIST curve P-384 (required by Intel's SGX SDK)
+OPENSSL_ELLIPTIC_CURVE = "secp384r1"
+
