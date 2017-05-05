@@ -1,7 +1,5 @@
 #!/usr/bin/env python3-sgx
 
-import sys
-import traceback
 import socketserver
 import socket
 import json
@@ -9,36 +7,46 @@ import logging
 import argparse
 import struct
 
-from sgx import util
+from sgx.util import get_attester_public_key
+from sgx.socket_util import receive_bytes
 
 try:
     from sgx.trusted.attestation import RemoteAttestationContext
     from sgx.trusted.attestation import get_new_public_key
     from sgx.trusted.attestation import process_msg2
     from sgx.trusted.attestation import get_msg3
-except ImportError as e:
-    print(traceback.format_exc(), file=sys.stderr)
+except:
+    logging.exception("")
     exit()
 
 
 URA_MANAGER_PORT = 9876
 
-ATTESTER_LT_PUBLIC_KEY = util.get_attester_public_key()
+ATTESTER_LT_PUBLIC_KEY = get_attester_public_key()
+
+logging_handlers = list()
 
 manager = None
 
 
 class RequestHandler(socketserver.StreamRequestHandler):
 
+    _request_num = 0
+
+    def __init__(self, *args, **kwargs):
+        self._request_num += 1
+        self.id = self._request_num
+        self.logger = logging.getLogger("Request#%s" % self.id)
+        super(RequestHandler, self).__init__(*args, **kwargs)
+
     def handle(self):
-        logging.info("Got request")
+        self.logger.info("Got request")
 
         client_socket = self.request
 
-        data = client_socket.recv(1024).strip()
-        logging.info("data: %r", data)
+        request = receive_bytes(client_socket)
 
-        if data == b"attest":
+        if request == b"attest":
             self.perform_attestation(client_socket)
 
     def perform_attestation(self, client_socket: socket.socket):
@@ -48,14 +56,14 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
             public_key = get_new_public_key(ra_context)
 
-            self.send_msg1(client_socket, ra_context, public_key)
+            self.send_msg1(client_socket, public_key)
 
-            attester_public_key, spid, quote_type, kdf_id, key_signature, mac, revocation_list = \
+            attester_public_key, spid, quote_type, kdf_id, key_signature, msg2_mac, revocation_list = \
                 self.receive_msg2(client_socket)
 
             qe_target_info = self.initialize_quoting_enclave()
 
-            logging.warning("revocation list: %r", revocation_list)
+            self.logger.warning("revocation list: %r", revocation_list)
 
             report, nonce = process_msg2(ra_context,
                                          qe_target_info,
@@ -64,29 +72,28 @@ class RequestHandler(socketserver.StreamRequestHandler):
                                          quote_type,
                                          kdf_id,
                                          key_signature,
-                                         mac,
+                                         msg2_mac,
                                          revocation_list)
 
             quote, qe_report = self.get_quote(report, quote_type, spid, nonce, revocation_list)
-            mac, platform_service_security_properties = get_msg3(ra_context, quote, qe_report)
+            msg3_mac, platform_service_security_properties = get_msg3(ra_context, quote, qe_report)
 
-            self.send_msg3(client_socket, quote, mac, platform_service_security_properties)
+            self.send_msg3(client_socket, quote, msg3_mac, platform_service_security_properties)
 
             verification_result = self.receive_msg4(client_socket)
-            
 
     # -------------------------------------------------------------------------
     # MSG0
     # -------------------------------------------------------------------------
 
     def send_msg0(self, client_socket: socket.socket):
-        logging.info("Preparing to send msg0")
+        self.logger.info("Preparing to send msg0")
 
         epid = self.get_epid()
 
         msg0 = json.dumps({"EPID": epid}).encode()
 
-        logging.info("Sending msg0")
+        self.logger.info("Sending msg0")
         client_socket.sendall(msg0)
 
     def get_epid(self):
@@ -99,20 +106,18 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         return epid
 
-    @staticmethod
-    def send_epid_request(ura_socket: socket.socket):
-        logging.info("Sending EPID request")
+    def send_epid_request(self, ura_socket: socket.socket):
+        self.logger.info("Sending EPID request")
 
         msg = json.dumps({"request": "GET EPID"}).encode()
 
         ura_socket.sendall(msg)
-        logging.info("EPID request sent")
+        self.logger.info("EPID request sent")
 
-    @staticmethod
-    def receive_epid(ura_socket: socket.socket()):
-        received_raw = ura_socket.recv(1024)
-        logging.debug("Received: %s" % received_raw)
+    def receive_epid(self, ura_socket: socket.socket()):
+        self.logger.info("Waiting for EPID")
 
+        received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
         assert (len(received_json) == 1)
@@ -123,12 +128,12 @@ class RequestHandler(socketserver.StreamRequestHandler):
     # MSG1
     # -------------------------------------------------------------------------
 
-    def send_msg1(self, client_socket: socket.socket, ra_context, public_key):
-        logging.info("Preparing to send msg1")
+    def send_msg1(self, client_socket: socket.socket, public_key):
+        self.logger.info("Preparing to send msg1")
 
         msg1 = json.dumps({"public_key": public_key.hex()}).encode()
 
-        logging.info("Sending msg1")
+        self.logger.info("Sending msg1")
         client_socket.sendall(msg1)
 
     # -------------------------------------------------------------------------
@@ -143,32 +148,28 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         return qe_target_info
 
-    @staticmethod
-    def send_qe_init_request(ura_socket: socket.socket):
-        logging.info("Sending quoting enclave initialization request")
+    def send_qe_init_request(self, ura_socket: socket.socket):
+        self.logger.info("Sending quoting enclave initialization request")
 
         msg = json.dumps({"request": "INIT QE"}).encode()
 
         ura_socket.sendall(msg)
-        logging.info("Quoting enclave initialization request sent")
+        self.logger.info("Quoting enclave initialization request sent")
 
-    @staticmethod
-    def receive_qe_target_info(ura_socket: socket.socket()):
-        received_raw = ura_socket.recv(2048)
-        logging.debug("Received: %s" % received_raw)
+    def receive_qe_target_info(self, ura_socket: socket.socket()):
+        self.logger.info("Waiting for quoting enclave target info")
 
+        received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
         assert (len(received_json) == 1)
 
         return bytes.fromhex(received_json["qe_target_info"])
 
-    @staticmethod
-    def receive_msg2(client_socket: socket.socket):
-        logging.info("Waiting for msg2")
+    def receive_msg2(self, client_socket: socket.socket):
+        self.logger.info("Waiting for msg2")
 
-        received_raw = client_socket.recv(1024)
-        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
+        received_raw = receive_bytes(client_socket)
 
         msg2 = json.loads(received_raw.decode('utf8'))
         assert (isinstance(msg2, dict))
@@ -201,17 +202,16 @@ class RequestHandler(socketserver.StreamRequestHandler):
             return self.receive_quote(ura_socket)
 
     def send_msg3(self, client_socket: socket.socket, quote: bytes, mac: bytes, platform_service_security_properties: bytes):
-        logging.info("Preparing to send msg3")
+        self.logger.info("Preparing to send msg3")
 
         msg3 = json.dumps({"quote": quote.hex(),
                            "mac": mac.hex(),
                            "platform_service_security_properties": platform_service_security_properties.hex()}).encode()
 
         client_socket.sendall(msg3)
-        logging.info("Msg3 sent")
+        self.logger.info("Msg3 sent")
 
-    @staticmethod
-    def send_quote_request(ura_socket: socket.socket, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
+    def send_quote_request(self, ura_socket: socket.socket, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
 
         msg = json.dumps({
             "request": "GET QUOTE",
@@ -222,15 +222,14 @@ class RequestHandler(socketserver.StreamRequestHandler):
             "revocation_list": revocation_list.hex()
         }).encode()
 
-        logging.info("Sending quote request (message size: %s)", len(msg))
+        self.logger.info("Sending quote request (message size: %s)", len(msg))
         ura_socket.sendall(msg)
-        logging.info("Quote request sent")
+        self.logger.info("Quote request sent")
 
-    @staticmethod
-    def receive_quote(ura_socket: socket.socket()):
-        received_raw = ura_socket.recv(4096)
-        logging.debug("Received (size: %s): %s", len(received_raw), received_raw)
+    def receive_quote(self, ura_socket: socket.socket()):
+        self.logger.info("Waiting for quote")
 
+        received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
         assert (len(received_json) == 2)
@@ -241,13 +240,9 @@ class RequestHandler(socketserver.StreamRequestHandler):
     # MSG4
     # -------------------------------------------------------------------------
 
-    @staticmethod
-    def receive_msg4(client_socket: socket.socket):
-        logging.info("Waiting for msg4")
-
-        received_raw = client_socket.recv(1024)
-        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
-
+    def receive_msg4(self, client_socket: socket.socket):
+        self.logger.info("Waiting for msg4")
+        received_raw = receive_bytes(client_socket)
         msg2 = json.loads(received_raw.decode('utf8'))
         assert (isinstance(msg2, dict))
 
@@ -256,26 +251,26 @@ class RequestHandler(socketserver.StreamRequestHandler):
         return verification_result
 
 
-def handle_error(request, client_address):
-    logging.exception("Exception while handling request %r" % request)
-
-
 class Manager(object):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        logging.info("Stopping server")
-        self.server.server_close()
-
     def __init__(self, interface, port):
         self.interface = interface
         self.port = port
         self.server = socketserver.TCPServer((interface, port), RequestHandler)
-        self.server.handle_error = handle_error
+        self.server.handle_error = self.handle_error
+        self.logger = logging.getLogger("Manager")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.info("Stopping server")
+        self.server.server_close()
+
+    def handle_error(self, request, client_address):
+        self.logger.exception("Exception while handling request %r" % request)
 
     def run(self):
-        logging.info("Listening for attestation requests on %s:%s", self.interface, self.port)
+        self.logger.info("Listening for attestation requests on %s:%s", self.interface, self.port)
         self.server.serve_forever()
 
 
@@ -308,5 +303,5 @@ if __name__ == "__main__":
         main()
     except:
         # Without this graphene's pal does not return on exceptions
-        print(traceback.format_exc(), file=sys.stderr)
+        logging.exception("")
         exit()

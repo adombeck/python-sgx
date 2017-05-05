@@ -1,38 +1,40 @@
 #!/usr/bin/env python3.5
 
-import sys
-import traceback
 import socketserver
 import socket
 import json
 import logging
 import argparse
 
-try:
-    from sgx.untrusted.attestation import get_extended_epid_group_id
-    from sgx.untrusted.attestation import initialize_quoting_enclave
-    from sgx.untrusted.attestation import get_quote_size
-    from sgx.untrusted.attestation import get_quote
-except ImportError as e:
-    print(traceback.format_exc(), file=sys.stderr)
-    exit()
+from sgx.socket_util import receive_bytes
+from sgx.untrusted.attestation import get_extended_epid_group_id
+from sgx.untrusted.attestation import initialize_quoting_enclave
+from sgx.untrusted.attestation import get_quote_size
+from sgx.untrusted.attestation import get_quote
 
 
 manager = None
 
 
 class RequestHandler(socketserver.StreamRequestHandler):
+
+    _request_num = 0
+
+    def __init__(self, *args, **kwargs):
+        self._request_num += 1
+        self.id = self._request_num
+        self.logger = logging.getLogger("Request#%s" % self.id)
+        super(RequestHandler, self).__init__(*args, **kwargs)
+
     def handle(self):
         client_socket = self.request
 
-        received_raw = client_socket.recv(2048).strip()
-        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
-
+        received_raw = receive_bytes(client_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
 
         request = received_json["request"]
-        logging.info("Got request %r", request)
+        self.logger.info("Got request %r", request)
 
         if request == "GET EPID":
             epid = get_extended_epid_group_id()
@@ -49,72 +51,64 @@ class RequestHandler(socketserver.StreamRequestHandler):
             nonce = bytes.fromhex(received_json["nonce"])
             revocation_list = bytes.fromhex(received_json["revocation_list"])
 
-            logging.warning("revocation list: %r", revocation_list)
+            self.logger.warning("revocation list: %r", revocation_list)
 
             quote_size = get_quote_size(revocation_list)
             quote, qe_report = get_quote(report, quote_type, spid, nonce, revocation_list, quote_size)
 
             self.send_quote(client_socket, quote, qe_report)
 
-
-    @staticmethod
-    def send_epid(client_socket: socket.socket, epid):
-        logging.info("Preparing to send EPID")
+    def send_epid(self, client_socket: socket.socket, epid):
+        self.logger.info("Preparing to send EPID")
 
         msg = json.dumps({"EPID": epid}).encode()
 
-        logging.info("Sending EPID (message size: %r)", len(msg))
+        self.logger.info("Sending EPID (message size: %r)", len(msg))
         client_socket.sendall(msg)
-        logging.info("EPID sent")
+        self.logger.info("EPID sent")
 
-    @staticmethod
-    def send_qe_target_info(client_socket: socket.socket, qe_target_info):
-        logging.info("Preparing to send quoting enclave target info")
+    def send_qe_target_info(self, client_socket: socket.socket, qe_target_info):
+        self.logger.info("Preparing to send quoting enclave target info")
 
         msg = json.dumps({"qe_target_info": qe_target_info.hex()}).encode()
 
-        logging.info("Sending quoting enclave target info (message size: %r)", len(msg))
+        self.logger.info("Sending quoting enclave target info (message size: %r)", len(msg))
         client_socket.sendall(msg)
-        logging.info("Quoting enclave target info sent")
+        self.logger.info("Quoting enclave target info sent")
 
-    @staticmethod
-    def receive_report(client_socket: socket.socket):
-        logging.info("Waiting for report")
-
-        received_raw = client_socket.recv(1024)
-
-        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
-
+    def receive_report(self, client_socket: socket.socket):
+        self.logger.info("Waiting for report")
+        received_raw = receive_bytes(client_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         assert (isinstance(received_json, dict))
 
         return bytes.fromhex(received_json["report"])
 
-    @staticmethod
-    def send_quote(client_socket: socket.socket, quote, qe_report):
-        logging.info("Preparing to send quote")
+    def send_quote(self, client_socket: socket.socket, quote, qe_report):
+        self.logger.info("Preparing to send quote")
 
         msg = json.dumps({"quote": quote.hex(), "qe_report": qe_report.hex()}).encode()
 
         client_socket.sendall(msg)
-        logging.info("Quote sent")
+        self.logger.info("Quote sent")
 
 
 class Manager(object):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        logging.info("Stopping server")
-        self.server.server_close()
-
     def __init__(self, interface, port):
         self.interface = interface
         self.port = port
         self.server = socketserver.TCPServer((interface, port), RequestHandler)
+        self.logger = logging.getLogger("Manager")
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.logger.info("Stopping server")
+        self.server.server_close()
 
     def run(self):
-        logging.info("Listening for attestation requests on %s:%s", self.interface, self.port)
+        self.logger.info("Listening for attestation requests on %s:%s", self.interface, self.port)
         self.server.serve_forever()
 
 
