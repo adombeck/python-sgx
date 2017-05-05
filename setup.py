@@ -61,8 +61,8 @@ sh.install("-m", "755", "-d", config.DATA_DIR)
 sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
 
 
-# Create python3 launcher in the data directory
-sh.cp("launcher/python3.manifest.template", config.DATA_DIR)
+# Create python3 sgx launcher in the data directory
+sh.cp("python3-sgx/python3.manifest.template", config.DATA_DIR)
 create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
 sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
 create_manifest(config.DATA_DIR)
