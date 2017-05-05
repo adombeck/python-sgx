@@ -33,6 +33,13 @@ Currently, this project does not provide functions to *create* an enclave. Inste
         sudo ./setup.sh
 
 
+## Uninstallation
+
+1. Run the uninstallation script:
+
+        sudo ./uninstall.sh
+
+
 ## Run tests
     cd launcher
     graphene-pal python3.manifest.sgx tests/test_seal.py seal
