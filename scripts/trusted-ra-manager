@@ -19,14 +19,12 @@ except:
     logging.exception("")
     exit()
 
-
-URA_MANAGER_PORT = 9876
-
 ATTESTER_LT_PUBLIC_KEY = get_attester_public_key()
 
 logging_handlers = list()
 
 manager = None
+ura_manager_port = None
 
 
 class RequestHandler(socketserver.StreamRequestHandler):
@@ -98,7 +96,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def get_epid(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
-            ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+            ura_socket.connect(("127.0.0.1", ura_manager_port))
 
             self.send_epid_request(ura_socket)
 
@@ -142,7 +140,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def initialize_quoting_enclave(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
-            ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+            ura_socket.connect(("127.0.0.1", ura_manager_port))
             self.send_qe_init_request(ura_socket)
             qe_target_info = self.receive_qe_target_info(ura_socket)
 
@@ -190,7 +188,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def get_quote(self, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
-            ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+            ura_socket.connect(("127.0.0.1", ura_manager_port))
 
             self.send_quote_request(ura_socket,
                                     report,
@@ -278,6 +276,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--interface", "-i", default="127.0.0.1")
     parser.add_argument("--port", "-p", type=int, default=6789)
+    parser.add_argument("--ura-port", type=int, default=9876, help="Port of the untrusted remote attestation manager")
     parser.add_argument("--verbose", "-v", action="store_true")
     return parser.parse_args()
 
@@ -287,6 +286,9 @@ def init(args):
         logging.basicConfig(level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.INFO)
+
+    global ura_manager_port
+    ura_manager_port = args.ura_port
 
 
 def main():
