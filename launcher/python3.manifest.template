@@ -30,6 +30,10 @@ fs.mount.config.type = chroot
 fs.mount.config.path = /etc/python-sgx
 fs.mount.config.uri = file:/etc/python-sgx
 
+fs.mount.tests.type = chroot
+fs.mount.tests.path = /tests
+fs.mount.tests.uri = file:$(TESTS_DIR)
+
 net.allow_bind.1 = 127.0.0.1:6789
 
 sys.stack.size = 256K
@@ -56,4 +60,4 @@ sgx.trusted_files.attester_public_key = file:/etc/python-sgx/attester_public.key
 sgx.allowed_files.pyhome = file:/usr/lib/python$(PYTHON_VERSION)
 sgx.allowed_files.pyhome_local = file:/usr/local/lib/python$(PYTHON_VERSION)
 
-sgx.allowed_files.tests = file:tests
+sgx.allowed_files.tests = file:$(TESTS_DIR)

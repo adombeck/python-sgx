@@ -12,6 +12,7 @@ from sgx.config import PYTHON_VERSION, LIBPROTOBUF_VERSION
 
 GRAPHENE_DIR = os.path.abspath(os.path.join(DIR, "../graphene/"))
 RUNTIME = os.path.join(GRAPHENE_DIR, "Runtime")
+TESTS_DIR = os.path.abspath(os.path.join(DIR, "../tests/"))
 
 
 def parse_args():
@@ -46,6 +47,7 @@ def main():
                     line = line.replace("$(RUNTIME)", RUNTIME)
                     line = line.replace("$(PYTHON_VERSION)", PYTHON_VERSION)
                     line = line.replace("$(LIBPROTOBUF_VERSION)", LIBPROTOBUF_VERSION)
+                    line = line.replace("$(TESTS_DIR)", TESTS_DIR)
                     f_manifest.write(line)
 
 
