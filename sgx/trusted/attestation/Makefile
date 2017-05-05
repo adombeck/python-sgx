@@ -29,10 +29,10 @@ $(NAME)_wrap.o: $(NAME)_wrap.c
 	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I$(SWIG_LIB) -I/usr/include/python3.5 -ldl
 
 $(NAME).o: $(NAME).c
-	gcc -Wall -Werror -fPIC -c $^ $(INCLUDES) -I/usr/include/python3.5 -Wl,--verbose
+	gcc -Wall -Werror -fPIC -c $^ $(INCLUDES) -I/usr/include/python3.5
 
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
-	gcc -g -Wall -Werror  -shared $^ -o $@ -Wl,--verbose \
+	gcc -g -Wall -Werror  -shared $^ -o $@ \
 		-I$(SDK)/include \
 		-I/usr/include/python3.5 \
 		-shared-libgcc \

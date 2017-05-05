@@ -11,9 +11,24 @@
 #include "sgx.h"
 #include "sgx_defs.h"
 #include "sgx_report.h"
+#include "sgx_key_exchange.h"
 
 extern void get_extended_epid_group_id(uint32_t* p_group_id);
 extern void initialize_quoting_enclave(sgx_target_info_t* p_qe_target_info);
+extern void get_quote_size(uint8_t* revocation_list, uint32_t revocation_list_size, uint32_t* p_quote_size);
+
+extern void get_quote(
+    sgx_report_t report,
+    uint16_t quote_type,
+    sgx_spid_t spid,
+    sgx_quote_nonce_t nonce,
+    uint8_t* revocation_list,
+    uint32_t revocation_list_size,
+    char* p_quote,
+    uint32_t* p_quote_size,
+    sgx_report_t* p_qe_report
+);
+
 %}
 
 
@@ -26,9 +41,39 @@ extern void initialize_quoting_enclave(sgx_target_info_t* p_qe_target_info);
 %include "sgx_tseal.h"
 
 %include "target_info.i"
+%include "report.i"
+%include "spid.i"
+%include "nonce.i"
+
 
 %apply uint32_t* OUTPUT { uint32_t* p_group_id };
 extern void get_extended_epid_group_id(uint32_t* p_group_id);
 
+
 %apply sgx_target_info_t* p_target_info { sgx_target_info_t* p_qe_target_info };
 extern void initialize_quoting_enclave(sgx_target_info_t* p_qe_target_info);
+
+
+%apply (char* STRING, size_t LENGTH) { (uint8_t* revocation_list, uint32_t revocation_list_size) };
+%apply uint32_t* OUTPUT { uint32_t* p_quote_size};
+extern void get_quote_size(uint8_t* revocation_list, uint32_t revocation_list_size, uint32_t* p_quote_size);
+
+
+%apply sgx_report_t report { sgx_report_t report };
+%apply sgx_spid_t spid { sgx_spid_t spid };
+%apply sgx_quote_nonce_t nonce { sgx_quote_nonce_t nonce };
+%apply (char* STRING, size_t LENGTH) { (uint8_t* revocation_list, uint32_t revocation_list_size) };
+%cstring_output_withsize(char* p_quote, uint32_t* p_quote_size);
+%apply sgx_report_t* p_report { sgx_report_t* p_qe_report };
+
+extern void get_quote(
+    sgx_report_t report,
+    uint16_t quote_type,
+    sgx_spid_t spid,
+    sgx_quote_nonce_t nonce,
+    uint8_t* revocation_list,
+    uint32_t revocation_list_size,
+    char* p_quote,
+    uint32_t* p_quote_size,
+    sgx_report_t* p_qe_report
+);

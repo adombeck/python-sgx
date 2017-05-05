@@ -9,7 +9,25 @@
 #include "sgx_tkey_exchange_t.h"
 #include "sgx_ukey_exchange.h"
 #include "sgx_uae_service.h"
+#include "sgx_utils.h"
 #include "global_data.h"
+
+
+static char error_message[256];
+static int error_status = 0;
+
+
+void clear_exception() {
+    error_status = 0;
+}
+
+
+char* check_exception() {
+    if (error_status)
+        return error_message;
+    else
+        return NULL;
+}
 
 
 static sgx_ec256_public_t g_sp_pub_key = {
@@ -71,21 +89,28 @@ void initialize_remote_attestation(sgx_ec256_public_t public_key, int use_pse, s
     sgx_status_t ret = sgx_ra_init(&public_key, use_pse, p_context);
     if(ret != SGX_SUCCESS)
     {
+        snprintf(error_message, 256, "Failed to call sgx_ra_init. Error code: 0x%x\n", ret);
+        error_status = 1;
+    }
+}
+
+
+void close_remote_attestation(sgx_ra_context_t context)
+{
+    sgx_status_t ret = sgx_ra_close(context);
+    if(ret != SGX_SUCCESS)
+    {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
-        fprintf(stderr, "Failed to call sgx_ra_init. Error code: 0x%x\n", ret);
+        fprintf(stderr, "Failed to call sgx_ra_close. Error code: 0x%x\n", ret);
         return;
     }
-    fprintf(stderr, "Successfully initialized remote attestation\n");
+    fprintf(stderr, "Successfully closed remote attestation\n");
 }
 
 
 void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_public_key)
 {
-    sgx_ec256_private_t* p_privkey = malloc(sizeof(sgx_ec256_private_t));
-
-    // XXX: Test if tmp is Null
-
-    sgx_status_t ret = sgx_ra_get_ga(context, p_enclave_public_key, p_privkey);
+    sgx_status_t ret = sgx_ra_get_ga(context, p_enclave_public_key);
     if(ret != SGX_SUCCESS)
     {
         // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
@@ -96,9 +121,6 @@ void get_new_public_key(sgx_ra_context_t context, sgx_ec256_public_t* p_enclave_
     fprintf(stderr, "Successfully generated session key pair\n");
     fprintf(stderr, "Enclave public key (g_a):\n");
     print_public_key(*p_enclave_public_key);
-
-    fprintf(stderr, "Enclave private key (a):\n");
-    PRINT_BYTE_ARRAY(p_privkey, sizeof(*p_privkey));
 }
 
 void process_msg2(sgx_ra_context_t context,
@@ -109,8 +131,8 @@ void process_msg2(sgx_ra_context_t context,
                   uint16_t kdf_id,
                   sgx_ec256_signature_t key_signature,
                   sgx_mac_t mac,
+                  uint8_t* revocation_list,
                   uint32_t revocation_list_size,
-                  char* revocation_list,
                   sgx_report_t* p_report,
                   sgx_quote_nonce_t* p_nonce
                   )
@@ -141,6 +163,11 @@ void process_msg2(sgx_ra_context_t context,
     fprintf(stderr, "QE target info in process_msg2():\n");
     PRINT_BYTE_ARRAY(&qe_target_info, sizeof(sgx_target_info_t));
 
+    fprintf(stderr, "revocation list in process_msg2():\n");
+    PRINT_BYTE_ARRAY(revocation_list, revocation_list_size);
+
+    fprintf(stderr, "revocation list size in process_msg2(): %u\n", revocation_list_size);
+
     sgx_ra_msg2_t msg2;
     msg2.g_b = public_key;
     msg2.spid = spid;
@@ -164,6 +191,54 @@ void process_msg2(sgx_ra_context_t context,
 
     fprintf(stderr, "Successfully processed msg2\n");
 }
+
+
+void get_msg3(sgx_ra_context_t context,
+              uint8_t* quote,
+              uint32_t quote_size,
+              sgx_report_t qe_report,
+              sgx_mac_t* p_mac,
+              char* platform_service_security_properties
+              )
+{
+    fprintf(stderr, "quote in get_msg3():\n");
+    PRINT_BYTE_ARRAY(quote, quote_size);
+
+    fprintf(stderr, "quote size get_msg3(): %u\n", quote_size);
+
+    fprintf(stderr, "qe_report in get_msg3():\n");
+    PRINT_BYTE_ARRAY(&qe_report, sizeof(sgx_report_t));
+
+    fprintf(stderr, "qe_report.mac in get_msg3():\n");
+    PRINT_BYTE_ARRAY(&qe_report.mac, sizeof(sgx_mac_t));
+
+    uint32_t msg3_size = sizeof(sgx_ra_msg3_t) + quote_size;
+    sgx_ra_msg3_t* p_msg3 = malloc(msg3_size);
+    if(!p_msg3)
+        {
+            // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
+            fprintf(stderr, "Failed to allocate memory for msg3\n");
+        }
+    memset(p_msg3, 0, msg3_size);
+
+    memcpy(&p_msg3->quote, quote, quote_size);
+
+    sgx_status_t ret = sgx_ra_get_msg3_trusted(context, quote_size, &qe_report, p_msg3, msg3_size);
+    if(ret != SGX_SUCCESS)
+    {
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
+        fprintf(stderr, "Failed to call sgx_ra_get_msg3_trusted. Error code: 0x%x\n", ret);
+        return;
+    }
+
+    memcpy(p_mac, &p_msg3->mac, sizeof(sgx_mac_t));
+    memcpy(platform_service_security_properties, &p_msg3->ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));
+
+    // Clear msg3 and free it
+    memset(p_msg3, 0, msg3_size);
+    free(p_msg3);
+}
+
 
 int main()
 {

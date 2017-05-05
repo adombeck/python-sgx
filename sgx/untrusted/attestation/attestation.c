@@ -7,6 +7,24 @@
 #include "sgx_uae_service.h"
 
 
+// Took this from the Intel SGX SDK's RemoteAttestation app
+void PRINT_BYTE_ARRAY(void *mem, uint32_t len)
+{
+    if(!mem || !len)
+    {
+        fprintf(stderr, "\n( null )\n");
+        return;
+    }
+    uint8_t *array = (uint8_t *)mem;
+    uint32_t i = 0;
+    for(i = 0; i < len; i++)
+    {
+        fprintf(stderr, "%02x", array[i]);
+    }
+    fprintf(stderr, "\n");
+}
+
+
 void print_target_info(sgx_target_info_t target_info)
 {
     int i;
@@ -82,10 +100,65 @@ void initialize_quoting_enclave(sgx_target_info_t* p_qe_target_info)
 }
 
 
-void get_quote(uint8_t* p_quote)
+void get_quote_size(uint8_t* revocation_list, uint32_t revocation_list_size, uint32_t* p_quote_size)
 {
+    sgx_status_t ret =  sgx_get_quote_size(revocation_list_size ? revocation_list : NULL, p_quote_size);
+    if(ret != SGX_SUCCESS)
+    {
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
+        fprintf(stderr, "Failed to call sgx_get_quote_size. Error code: 0x%x\n", ret);
+        return;
+    }
 
+    fprintf(stderr, "Successfully got quote size %u\n", *p_quote_size);
 }
+
+
+void get_quote(sgx_report_t report,
+               uint16_t quote_type,
+               sgx_spid_t spid,
+               sgx_quote_nonce_t nonce,
+               uint8_t* revocation_list,
+               uint32_t revocation_list_size,
+               char* p_quote,
+               uint32_t* p_quote_size,
+               sgx_report_t* p_qe_report)
+{
+    fprintf(stderr, "p_quote_size in get_quote(): %u\n", *p_quote_size);
+
+    memset(p_quote, 0, *p_quote_size);
+
+    sgx_status_t ret = sgx_get_quote(&report,
+                                     quote_type,
+                                     &spid,
+                                     &nonce,
+                                     revocation_list_size ? revocation_list : NULL,
+                                     revocation_list_size,
+                                     p_qe_report,
+                                     (sgx_quote_t *) p_quote,
+                                     *p_quote_size);
+
+    if(ret != SGX_SUCCESS)
+    {
+        // XXX: Throw Python exception. See http://www.swig.org/Doc1.1/HTML/Exceptions.html
+        fprintf(stderr, "Failed to call sgx_get_quote. Error code: 0x%x\n", ret);
+        return;
+    }
+
+    fprintf(stderr, "Successfully got quote\n");
+
+    fprintf(stderr, "quote:\n");
+    PRINT_BYTE_ARRAY(p_quote, *p_quote_size);
+
+    fprintf(stderr, "quote size: %u\n", *p_quote_size);
+
+    fprintf(stderr, "qe_report:\n");
+    PRINT_BYTE_ARRAY(p_qe_report, sizeof(sgx_report_t));
+
+    fprintf(stderr, "qe_report.mac:\n");
+    PRINT_BYTE_ARRAY(&p_qe_report->mac, sizeof(sgx_mac_t));
+}
+
 
 
 int main()

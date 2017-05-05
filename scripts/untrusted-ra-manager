@@ -6,16 +6,17 @@ import socketserver
 import socket
 import json
 import logging
+import argparse
 
 try:
-    from sgx.untrusted.attestation import get_extended_epid_group_id, initialize_quoting_enclave
+    from sgx.untrusted.attestation import get_extended_epid_group_id
+    from sgx.untrusted.attestation import initialize_quoting_enclave
+    from sgx.untrusted.attestation import get_quote_size
+    from sgx.untrusted.attestation import get_quote
 except ImportError as e:
     print(traceback.format_exc(), file=sys.stderr)
     exit()
 
-
-HOST = "127.0.0.1"
-PORT = 9876
 
 manager = None
 
@@ -24,27 +25,46 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
         client_socket = self.request
 
-        data = client_socket.recv(1024).strip()
-        logging.info("Got request %r", data)
+        received_raw = client_socket.recv(2048).strip()
+        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
 
-        if data == b"get_epid":
-            self.send_epid(client_socket)
+        received_json = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(received_json, dict))
 
-        if data == b"init_quote":
+        request = received_json["request"]
+        logging.info("Got request %r", request)
+
+        if request == "GET EPID":
+            epid = get_extended_epid_group_id()
+            self.send_epid(client_socket, epid)
+
+        if request == "INIT QE":
             qe_target_info = initialize_quoting_enclave()
             self.send_qe_target_info(client_socket, qe_target_info)
 
-    @staticmethod
-    def send_epid(client_socket: socket.socket):
-        logging.info("Preparing to send EPID")
+        if request == "GET QUOTE":
+            report = bytes.fromhex(received_json["report"])
+            quote_type = received_json["quote_type"]
+            spid = bytes.fromhex(received_json["spid"])
+            nonce = bytes.fromhex(received_json["nonce"])
+            revocation_list = bytes.fromhex(received_json["revocation_list"])
 
-        epid = get_extended_epid_group_id()
+            logging.warning("revocation list: %r", revocation_list)
+
+            quote_size = get_quote_size(revocation_list)
+            quote, qe_report = get_quote(report, quote_type, spid, nonce, revocation_list, quote_size)
+
+            self.send_quote(client_socket, quote, qe_report)
+
+
+    @staticmethod
+    def send_epid(client_socket: socket.socket, epid):
+        logging.info("Preparing to send EPID")
 
         msg = json.dumps({"EPID": epid}).encode()
 
         logging.info("Sending EPID (message size: %r)", len(msg))
         client_socket.sendall(msg)
-
         logging.info("EPID sent")
 
     @staticmethod
@@ -55,8 +75,29 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         logging.info("Sending quoting enclave target info (message size: %r)", len(msg))
         client_socket.sendall(msg)
-
         logging.info("Quoting enclave target info sent")
+
+    @staticmethod
+    def receive_report(client_socket: socket.socket):
+        logging.info("Waiting for report")
+
+        received_raw = client_socket.recv(1024)
+
+        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
+
+        received_json = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(received_json, dict))
+
+        return bytes.fromhex(received_json["report"])
+
+    @staticmethod
+    def send_quote(client_socket: socket.socket, quote, qe_report):
+        logging.info("Preparing to send quote")
+
+        msg = json.dumps({"quote": quote.hex(), "qe_report": qe_report.hex()}).encode()
+
+        client_socket.sendall(msg)
+        logging.info("Quote sent")
 
 
 class Manager(object):
@@ -67,19 +108,37 @@ class Manager(object):
         logging.info("Stopping server")
         self.server.server_close()
 
-    def __init__(self):
-        self.server = socketserver.TCPServer((HOST, PORT), RequestHandler)
+    def __init__(self, interface, port):
+        self.interface = interface
+        self.port = port
+        self.server = socketserver.TCPServer((interface, port), RequestHandler)
 
     def run(self):
-        logging.info("Listening for attestation requests on %s:%s", HOST, PORT)
+        logging.info("Listening for attestation requests on %s:%s", self.interface, self.port)
         self.server.serve_forever()
 
 
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--interface", "-i", default="127.0.0.1")
+    parser.add_argument("--port", "-p", type=int, default=9876)
+    parser.add_argument("--verbose", "-v", action="store_true")
+    return parser.parse_args()
+
+
+def init(args):
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
+
+
 def main():
-    logging.basicConfig(level=logging.INFO)
+    args = parse_args()
+    init(args)
 
     global manager
-    with Manager() as manager:
+    with Manager(args.interface, args.port) as manager:
         manager.run()
 
 

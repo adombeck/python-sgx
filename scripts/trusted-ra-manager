@@ -8,12 +8,14 @@ import json
 import logging
 import argparse
 import struct
-import time
 
 from sgx import util
 
 try:
-    from sgx.trusted.attestation import initialize_remote_attestation, get_new_public_key, process_msg2
+    from sgx.trusted.attestation import RemoteAttestationContext
+    from sgx.trusted.attestation import get_new_public_key
+    from sgx.trusted.attestation import process_msg2
+    from sgx.trusted.attestation import get_msg3
 except ImportError as e:
     print(traceback.format_exc(), file=sys.stderr)
     exit()
@@ -28,12 +30,6 @@ manager = None
 
 class RequestHandler(socketserver.StreamRequestHandler):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ra_context = None
-        self.qe_target_info = None
-        self.report = None
-
     def handle(self):
         logging.info("Got request")
 
@@ -43,9 +39,41 @@ class RequestHandler(socketserver.StreamRequestHandler):
         logging.info("data: %r", data)
 
         if data == b"attest":
-            self.send_msg0(client_socket)
-            self.send_msg1(client_socket)
-            self.receive_msg2(client_socket)
+            self.perform_attestation(client_socket)
+
+    def perform_attestation(self, client_socket: socket.socket):
+        self.send_msg0(client_socket)
+
+        with RemoteAttestationContext(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
+
+            public_key = get_new_public_key(ra_context)
+
+            self.send_msg1(client_socket, ra_context, public_key)
+
+            attester_public_key, spid, quote_type, kdf_id, key_signature, mac, revocation_list = \
+                self.receive_msg2(client_socket)
+
+            qe_target_info = self.initialize_quoting_enclave()
+
+            logging.warning("revocation list: %r", revocation_list)
+
+            report, nonce = process_msg2(ra_context,
+                                         qe_target_info,
+                                         attester_public_key,
+                                         spid,
+                                         quote_type,
+                                         kdf_id,
+                                         key_signature,
+                                         mac,
+                                         revocation_list)
+
+            quote, qe_report = self.get_quote(report, quote_type, spid, nonce, revocation_list)
+            mac, platform_service_security_properties = get_msg3(ra_context, quote, qe_report)
+
+            self.send_msg3(client_socket, quote, mac, platform_service_security_properties)
+
+            verification_result = self.receive_msg4(client_socket)
+            
 
     # -------------------------------------------------------------------------
     # MSG0
@@ -74,7 +102,10 @@ class RequestHandler(socketserver.StreamRequestHandler):
     @staticmethod
     def send_epid_request(ura_socket: socket.socket):
         logging.info("Sending EPID request")
-        ura_socket.sendall(b"get_epid")
+
+        msg = json.dumps({"request": "GET EPID"}).encode()
+
+        ura_socket.sendall(msg)
         logging.info("EPID request sent")
 
     @staticmethod
@@ -92,13 +123,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
     # MSG1
     # -------------------------------------------------------------------------
 
-    def send_msg1(self, client_socket: socket.socket):
+    def send_msg1(self, client_socket: socket.socket, ra_context, public_key):
         logging.info("Preparing to send msg1")
-
-        self.ra_context = initialize_remote_attestation(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0)
-
-        public_key = get_new_public_key(self.ra_context)
-        logging.info("Session public key: %r", public_key)
 
         msg1 = json.dumps({"public_key": public_key.hex()}).encode()
 
@@ -109,49 +135,21 @@ class RequestHandler(socketserver.StreamRequestHandler):
     # MSG2
     # -------------------------------------------------------------------------
 
-    def receive_msg2(self, client_socket: socket.socket):
-        logging.info("Waiting for msg2")
-
-        received_raw = client_socket.recv(1024)
-
-        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
-
-        received_json = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(received_json, dict))
-
-        public_key = bytes.fromhex(received_json["public_key"])
-        spid = bytes.fromhex(received_json["spid"])
-        quote_type = struct.unpack("H", bytes.fromhex(received_json["quote_type"]))[0]
-        kdf_id = struct.unpack("H", bytes.fromhex(received_json["kdf_id"]))[0]
-        key_signature = bytes.fromhex(received_json["key_signature"])
-        mac = bytes.fromhex(received_json["mac"])
-        revocation_list = bytes.fromhex(received_json["revocation_list"])
-
-        self.initialize_quoting_enclave()
-
-        self.report = process_msg2(self.ra_context,
-                              self.qe_target_info,
-                              public_key,
-                              spid,
-                              quote_type,
-                              kdf_id,
-                              key_signature,
-                              mac,
-                              len(revocation_list),
-                              revocation_list)
-        logging.debug("Got report: %r", self.report.hex())
-
     def initialize_quoting_enclave(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
             self.send_qe_init_request(ura_socket)
-            self.qe_target_info = self.receive_qe_target_info(ura_socket)
-            logging.debug("QE target info: %r", self.qe_target_info)
+            qe_target_info = self.receive_qe_target_info(ura_socket)
+
+        return qe_target_info
 
     @staticmethod
     def send_qe_init_request(ura_socket: socket.socket):
         logging.info("Sending quoting enclave initialization request")
-        ura_socket.sendall(b"init_quote")
+
+        msg = json.dumps({"request": "INIT QE"}).encode()
+
+        ura_socket.sendall(msg)
         logging.info("Quoting enclave initialization request sent")
 
     @staticmethod
@@ -165,19 +163,116 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         return bytes.fromhex(received_json["qe_target_info"])
 
+    @staticmethod
+    def receive_msg2(client_socket: socket.socket):
+        logging.info("Waiting for msg2")
+
+        received_raw = client_socket.recv(1024)
+        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
+
+        msg2 = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(msg2, dict))
+
+        attester_public_key = bytes.fromhex(msg2["public_key"])
+        spid = bytes.fromhex(msg2["spid"])
+        quote_type = struct.unpack("H", bytes.fromhex(msg2["quote_type"]))[0]
+        kdf_id = struct.unpack("H", bytes.fromhex(msg2["kdf_id"]))[0]
+        key_signature = bytes.fromhex(msg2["key_signature"])
+        mac = bytes.fromhex(msg2["mac"])
+        revocation_list = bytes.fromhex(msg2["revocation_list"])
+
+        return attester_public_key, spid, quote_type, kdf_id, key_signature, mac, revocation_list
+
+    # -------------------------------------------------------------------------
+    # MSG3
+    # -------------------------------------------------------------------------
+
+    def get_quote(self, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
+            ura_socket.connect(("127.0.0.1", URA_MANAGER_PORT))
+
+            self.send_quote_request(ura_socket,
+                                    report,
+                                    quote_type,
+                                    spid,
+                                    nonce,
+                                    revocation_list)
+
+            return self.receive_quote(ura_socket)
+
+    def send_msg3(self, client_socket: socket.socket, quote: bytes, mac: bytes, platform_service_security_properties: bytes):
+        logging.info("Preparing to send msg3")
+
+        msg3 = json.dumps({"quote": quote.hex(),
+                           "mac": mac.hex(),
+                           "platform_service_security_properties": platform_service_security_properties.hex()}).encode()
+
+        client_socket.sendall(msg3)
+        logging.info("Msg3 sent")
+
+    @staticmethod
+    def send_quote_request(ura_socket: socket.socket, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
+
+        msg = json.dumps({
+            "request": "GET QUOTE",
+            "report": report.hex(),
+            "quote_type": quote_type,
+            "spid": spid.hex(),
+            "nonce": nonce.hex(),
+            "revocation_list": revocation_list.hex()
+        }).encode()
+
+        logging.info("Sending quote request (message size: %s)", len(msg))
+        ura_socket.sendall(msg)
+        logging.info("Quote request sent")
+
+    @staticmethod
+    def receive_quote(ura_socket: socket.socket()):
+        received_raw = ura_socket.recv(4096)
+        logging.debug("Received (size: %s): %s", len(received_raw), received_raw)
+
+        received_json = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(received_json, dict))
+        assert (len(received_json) == 2)
+
+        return bytes.fromhex(received_json["quote"]), bytes.fromhex(received_json["qe_report"])
+
+    # -------------------------------------------------------------------------
+    # MSG4
+    # -------------------------------------------------------------------------
+
+    @staticmethod
+    def receive_msg4(client_socket: socket.socket):
+        logging.info("Waiting for msg4")
+
+        received_raw = client_socket.recv(1024)
+        logging.debug("Received %s bytes: %s", len(received_raw), received_raw)
+
+        msg2 = json.loads(received_raw.decode('utf8'))
+        assert (isinstance(msg2, dict))
+
+        verification_result = msg2["verification_result"]
+
+        return verification_result
+
+
+def handle_error(request, client_address):
+    logging.exception("Exception while handling request %r" % request)
+
 
 class Manager(object):
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        logging.info("Closing socket")
+        logging.info("Stopping server")
         self.server.server_close()
 
     def __init__(self, interface, port):
         self.interface = interface
         self.port = port
         self.server = socketserver.TCPServer((interface, port), RequestHandler)
+        self.server.handle_error = handle_error
 
     def run(self):
         logging.info("Listening for attestation requests on %s:%s", self.interface, self.port)
