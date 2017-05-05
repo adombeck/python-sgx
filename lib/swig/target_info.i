@@ -33,5 +33,6 @@
 }
 
 %typemap(argout) sgx_target_info_t* p_target_info {
-    $result = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_target_info_t));
+    PyObject* pybytes = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_target_info_t));
+    $result = SWIG_Python_AppendOutput($result, pybytes);
 }

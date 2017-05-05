@@ -56,5 +56,6 @@
     reverse_byte_array(&tmp[0], 32);
     reverse_byte_array(&tmp[32], 32);
 
-    $result = PyBytes_FromStringAndSize((char*) tmp, 64);
+    PyObject* pybytes = PyBytes_FromStringAndSize((char*) tmp, 64);
+    $result = SWIG_Python_AppendOutput($result, pybytes);
 }

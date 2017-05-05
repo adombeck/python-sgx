@@ -20,3 +20,21 @@
     // Reverse byte order to little-endian
     reverse_byte_array($1, 16);
 }
+
+%typemap(out) sgx_mac_t mac {
+    $result = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_mac_t));
+}
+
+
+// Define typemaps for p_mac
+
+// This typemap suppresses requiring the parameter as an input.
+%typemap(in,numinputs=0) sgx_mac_t* p_mac (sgx_mac_t temp) {
+    memset(&temp, 0, sizeof(sgx_mac_t));
+    $1 = &temp;
+}
+
+%typemap(argout) sgx_mac_t* p_mac {
+    PyObject* pybytes = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_mac_t));
+    $result = SWIG_Python_AppendOutput($result, pybytes);
+}
