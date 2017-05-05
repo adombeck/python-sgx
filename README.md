@@ -41,9 +41,8 @@ Currently, this project does not provide functions to *create* an enclave. Inste
 
 
 ## Run tests
-    cd launcher
-    graphene-pal python3.manifest.sgx tests/test_seal.py seal
-    graphene-pal python3.manifest.sgx tests/test_seal.py unseal
+    python3-sgx tests/test_seal.py seal
+    python3-sgx tests/test_seal.py unseal
 
 ## Test remote attestation
 Note: You need to install the [python-sgx-attester](https://github.com/adombeck/python-sgx-attester) to connect to the remote attestation manager
