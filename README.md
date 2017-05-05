@@ -30,7 +30,7 @@ Currently, this project does not provide functions to *create* an enclave. Inste
 3. Adjust the paths in `sgx/config.py` (or keep the default paths)
 4. Run the setup script:
 
-        sudo ./setup.sh
+        ./setup.sh
 
 
 ## Uninstallation
