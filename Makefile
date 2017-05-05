@@ -5,5 +5,4 @@ include Makefile.config
 .PHONY: $(targets)
 $(targets):
 	$(MAKE) -C sgx $@
-	$(MAKE) -C launcher $@
 
