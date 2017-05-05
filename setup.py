@@ -19,7 +19,7 @@ from setuptools import setup, find_packages
 import importlib
 config = importlib.import_module("sgx.config")
 
-GRAPHENE_DIR = "./graphene/"
+GRAPHENE_DIR = os.path.abspath("./graphene/")
 
 
 # Check if swig >= 3.0.10 is installed
