@@ -19,23 +19,11 @@
 
     uint8_t* bytes = (uint8_t*) PyBytes_AsString($input);
 
-    // Reverse byte order to little-endian
-    reverse_byte_array(&bytes[0], 32);
-    reverse_byte_array(&bytes[32], 32);
-
     memcpy(&$1, bytes, sizeof(sgx_ec256_public_t));
-}
 
-%typemap(out) sgx_ec256_public_t public_key {
-    uint8_t tmp[64];
-    memcpy(&tmp[0], $1.gx, 32);
-    memcpy(&tmp[32], $1.gy, 32);
-
-    // Reverse byte order to big-endian
-    reverse_byte_array(&tmp[0], 32);
-    reverse_byte_array(&tmp[32], 32);
-
-    $result = PyBytes_FromStringAndSize((char*) tmp, 64);
+    // Reverse byte order to little-endian
+    reverse_byte_array((uint8_t*) &$1, 32);
+    reverse_byte_array((uint8_t*) &$1 + 32, 32);
 }
 
 

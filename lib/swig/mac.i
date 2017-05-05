@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------------
-// map sgx_ec256_signature_t to Python bytes
+// map sgx_mac_t to Python bytes
 // ----------------------------------------------------------------------------
 
 %typemap(in) sgx_mac_t mac {
@@ -16,13 +16,6 @@
     }
 
     memcpy($1, PyBytes_AsString($input), 16);
-
-    // Reverse byte order to little-endian
-    reverse_byte_array($1, 16);
-}
-
-%typemap(out) sgx_mac_t mac {
-    $result = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_mac_t));
 }
 
 

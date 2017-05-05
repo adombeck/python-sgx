@@ -17,9 +17,9 @@
 
     uint8_t* bytes = (uint8_t*) PyBytes_AsString($input);
 
-    // Reverse byte order to little-endian
-    reverse_byte_array(&bytes[0], 32);
-    reverse_byte_array(&bytes[32], 32);
-
     memcpy(&$1, bytes, sizeof(sgx_ec256_signature_t));
+
+    // Reverse byte order to little-endian
+    reverse_byte_array((uint8_t*) &$1, 32);
+    reverse_byte_array((uint8_t*) &$1 + 32, 32);
 }

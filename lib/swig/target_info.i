@@ -19,11 +19,6 @@
 }
 
 
-%typemap(out) sgx_target_info_t target_info {
-    $result = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_target_info_t));
-}
-
-
 // Define typemaps for p_target_info
 
 // This typemap suppresses requiring the parameter as an input.

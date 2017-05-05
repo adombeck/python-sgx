@@ -19,11 +19,6 @@
 }
 
 
-%typemap(out) sgx_quote_nonce_t nonce {
-    $result = PyBytes_FromStringAndSize((char*) $1, sizeof(sgx_quote_nonce_t));
-}
-
-
 // Define typemaps for p_nonce
 
 // This typemap suppresses requiring the parameter as an input.
