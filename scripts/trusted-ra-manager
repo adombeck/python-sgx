@@ -10,6 +10,7 @@ import struct
 from sgx.util import get_attester_public_key, check_json
 from sgx.socket_util import receive_bytes
 
+# noinspection PyBroadException
 try:
     from sgx.trusted.attestation import remote_attestation_context
     from sgx.trusted.attestation import get_new_public_key
@@ -18,6 +19,7 @@ try:
 except:
     logging.exception("")
     exit()
+
 
 ATTESTER_LT_PUBLIC_KEY = get_attester_public_key()
 
@@ -35,6 +37,24 @@ class RequestHandler(socketserver.StreamRequestHandler):
         self._request_num += 1
         self.id = self._request_num
         self.logger = logging.getLogger("Request#%s" % self.id)
+
+        self.public_key = None
+        self.attester_public_key = None
+        self.spid = None
+        self.quote_type = None
+        self.kdf_id = None
+        self.key_signature = None
+        self.msg2_mac = None
+        self.revocation_list = None
+        self.qe_target_info = None
+        self.report = None
+        self.nonce = None
+        self.quote = None
+        self.qe_report = None
+        self.msg3_mac = None
+        self.platform_service_security_properties = None
+        self.verification_result = None
+
         super(RequestHandler, self).__init__(*args, **kwargs)
 
     def handle(self):
@@ -52,33 +72,16 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         with remote_attestation_context(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
 
-            public_key = get_new_public_key(ra_context)
+            self.public_key = get_new_public_key(ra_context)
+            self.send_msg1(client_socket)
 
-            self.send_msg1(client_socket, public_key)
+            self.receive_msg2(client_socket)
+            self.process_msg2(ra_context)
 
-            attester_public_key, spid, quote_type, kdf_id, key_signature, msg2_mac, revocation_list = \
-                self.receive_msg2(client_socket)
+            self.create_msg3(ra_context)
+            self.send_msg3(client_socket)
 
-            qe_target_info = self.initialize_quoting_enclave()
-
-            self.logger.warning("revocation list: %r", revocation_list)
-
-            report, nonce = process_msg2(ra_context,
-                                         qe_target_info,
-                                         attester_public_key,
-                                         spid,
-                                         quote_type,
-                                         kdf_id,
-                                         key_signature,
-                                         msg2_mac,
-                                         revocation_list)
-
-            quote, qe_report = self.get_quote(report, quote_type, spid, nonce, revocation_list)
-            msg3_mac, platform_service_security_properties = get_msg3(ra_context, quote, qe_report)
-
-            self.send_msg3(client_socket, quote, msg3_mac, platform_service_security_properties)
-
-            verification_result = self.receive_msg4(client_socket)
+            self.receive_msg4(client_socket)
 
     # -------------------------------------------------------------------------
     # MSG0
@@ -86,50 +89,37 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def send_msg0(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg0")
-
         epid = self.get_epid()
-
         msg0 = json.dumps({"EPID": epid}).encode()
-
         self.logger.info("Sending msg0")
         client_socket.sendall(msg0)
 
     def get_epid(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", ura_manager_port))
-
             self.send_epid_request(ura_socket)
-
-            epid = self.receive_epid(ura_socket)
-
-        return epid
+            return self.receive_epid(ura_socket)
 
     def send_epid_request(self, ura_socket: socket.socket):
         self.logger.info("Sending EPID request")
-
         msg = json.dumps({"request": "GET EPID"}).encode()
-
         ura_socket.sendall(msg)
         self.logger.info("EPID request sent")
 
     def receive_epid(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for EPID")
-
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         check_json(received_json, dict, 1)
-
         return received_json["EPID"]
 
     # -------------------------------------------------------------------------
     # MSG1
     # -------------------------------------------------------------------------
 
-    def send_msg1(self, client_socket: socket.socket, public_key):
+    def send_msg1(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg1")
-
-        msg1 = json.dumps({"public_key": public_key.hex()}).encode()
-
+        msg1 = json.dumps({"public_key": self.public_key.hex()}).encode()
         self.logger.info("Sending msg1")
         client_socket.sendall(msg1)
 
@@ -141,81 +131,88 @@ class RequestHandler(socketserver.StreamRequestHandler):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", ura_manager_port))
             self.send_qe_init_request(ura_socket)
-            qe_target_info = self.receive_qe_target_info(ura_socket)
-
-        return qe_target_info
+            return self.receive_qe_target_info(ura_socket)
 
     def send_qe_init_request(self, ura_socket: socket.socket):
         self.logger.info("Sending quoting enclave initialization request")
-
         msg = json.dumps({"request": "INIT QE"}).encode()
-
         ura_socket.sendall(msg)
         self.logger.info("Quoting enclave initialization request sent")
 
     def receive_qe_target_info(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for quoting enclave target info")
-
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         check_json(received_json, dict, 1)
-
         return bytes.fromhex(received_json["qe_target_info"])
 
     def receive_msg2(self, client_socket: socket.socket):
         self.logger.info("Waiting for msg2")
 
         received_raw = receive_bytes(client_socket)
-
         msg2 = json.loads(received_raw.decode('utf8'))
         check_json(msg2, dict, 7)
 
-        attester_public_key = bytes.fromhex(msg2["public_key"])
-        spid = bytes.fromhex(msg2["spid"])
-        quote_type = struct.unpack("H", bytes.fromhex(msg2["quote_type"]))[0]
-        kdf_id = struct.unpack("H", bytes.fromhex(msg2["kdf_id"]))[0]
-        key_signature = bytes.fromhex(msg2["key_signature"])
-        mac = bytes.fromhex(msg2["mac"])
-        revocation_list = bytes.fromhex(msg2["revocation_list"])
+        self.attester_public_key = bytes.fromhex(msg2["public_key"])
+        self.spid = bytes.fromhex(msg2["spid"])
+        self.quote_type = struct.unpack("H", bytes.fromhex(msg2["quote_type"]))[0]
+        self.kdf_id = struct.unpack("H", bytes.fromhex(msg2["kdf_id"]))[0]
+        self.key_signature = bytes.fromhex(msg2["key_signature"])
+        self.msg2_mac = bytes.fromhex(msg2["mac"])
+        self.revocation_list = bytes.fromhex(msg2["revocation_list"])
 
-        return attester_public_key, spid, quote_type, kdf_id, key_signature, mac, revocation_list
+        self.logger.info("Msg2 received")
+
+    def process_msg2(self, ra_context):
+        self.logger.info("Processing msg2")
+
+        self.qe_target_info = self.initialize_quoting_enclave()
+
+        self.report, self.nonce = process_msg2(
+            ra_context,
+            self.qe_target_info,
+            self.attester_public_key,
+            self.spid,
+            self.quote_type,
+            self.kdf_id,
+            self.key_signature,
+            self.msg2_mac,
+            self.revocation_list
+        )
+
+        self.logger.info("Msg2 processed")
 
     # -------------------------------------------------------------------------
     # MSG3
     # -------------------------------------------------------------------------
 
-    def get_quote(self, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
+    def create_msg3(self, ra_context):
+        self.logger.info("Creating msg3")
+
+        self.quote, self.qe_report = self.get_quote()
+
+        self.msg3_mac, self.platform_service_security_properties = get_msg3(
+            ra_context,
+            self.quote,
+            self.qe_report
+        )
+
+        self.logger.info("Msg3 created")
+
+    def get_quote(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", ura_manager_port))
-
-            self.send_quote_request(ura_socket,
-                                    report,
-                                    quote_type,
-                                    spid,
-                                    nonce,
-                                    revocation_list)
-
+            self.send_quote_request(ura_socket)
             return self.receive_quote(ura_socket)
 
-    def send_msg3(self, client_socket: socket.socket, quote: bytes, mac: bytes, platform_service_security_properties: bytes):
-        self.logger.info("Preparing to send msg3")
-
-        msg3 = json.dumps({"quote": quote.hex(),
-                           "mac": mac.hex(),
-                           "platform_service_security_properties": platform_service_security_properties.hex()}).encode()
-
-        client_socket.sendall(msg3)
-        self.logger.info("Msg3 sent")
-
-    def send_quote_request(self, ura_socket: socket.socket, report: bytes, quote_type: int, spid: bytes, nonce: bytes, revocation_list: bytes):
-
+    def send_quote_request(self, ura_socket: socket.socket):
         msg = json.dumps({
             "request": "GET QUOTE",
-            "report": report.hex(),
-            "quote_type": quote_type,
-            "spid": spid.hex(),
-            "nonce": nonce.hex(),
-            "revocation_list": revocation_list.hex()
+            "report": self.report.hex(),
+            "quote_type": self.quote_type,
+            "spid": self.spid.hex(),
+            "nonce": self.nonce.hex(),
+            "revocation_list": self.revocation_list.hex()
         }).encode()
 
         self.logger.info("Sending quote request (message size: %s)", len(msg))
@@ -224,12 +221,23 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def receive_quote(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for quote")
-
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         check_json(received_json, dict, 2)
-
+        self.logger.info("Quote received")
         return bytes.fromhex(received_json["quote"]), bytes.fromhex(received_json["qe_report"])
+
+    def send_msg3(self, client_socket: socket.socket):
+        self.logger.info("Preparing to send msg3")
+
+        msg3 = json.dumps(
+            {"quote": self.quote.hex(),
+             "mac": self.msg3_mac.hex(),
+             "platform_service_security_properties": self.platform_service_security_properties.hex()}
+        ).encode()
+
+        client_socket.sendall(msg3)
+        self.logger.info("Msg3 sent")
 
     # -------------------------------------------------------------------------
     # MSG4
@@ -240,10 +248,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
         received_raw = receive_bytes(client_socket)
         msg4 = json.loads(received_raw.decode('utf8'))
         check_json(msg4, dict, 1)
-
-        verification_result = msg4["verification_result"]
-
-        return verification_result
+        self.logger.info("Msg4 received")
+        return msg4["verification_result"]
 
 
 class Manager(object):
@@ -261,6 +267,7 @@ class Manager(object):
         self.logger.info("Stopping server")
         self.server.server_close()
 
+    # noinspection PyUnusedLocal
     def handle_error(self, request, client_address):
         self.logger.exception("Exception while handling request %r" % request)
 
@@ -298,6 +305,7 @@ def main():
 
 
 if __name__ == "__main__":
+    # noinspection PyBroadException
     try:
         main()
     except:
