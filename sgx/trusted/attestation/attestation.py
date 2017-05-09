@@ -9,7 +9,7 @@ def initialize_remote_attestation(attester_public_key, use_pse=False):
 
 
 @contextmanager
-def RemoteAttestationContext(attester_public_key, use_pse=False):
+def remote_attestation_context(attester_public_key, use_pse=False):
     ra_context = initialize_remote_attestation(attester_public_key, use_pse)
     yield ra_context
     close_remote_attestation(ra_context)

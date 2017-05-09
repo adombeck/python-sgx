@@ -11,7 +11,7 @@ from sgx.util import get_attester_public_key
 from sgx.socket_util import receive_bytes
 
 try:
-    from sgx.trusted.attestation import RemoteAttestationContext
+    from sgx.trusted.attestation import remote_attestation_context
     from sgx.trusted.attestation import get_new_public_key
     from sgx.trusted.attestation import process_msg2
     from sgx.trusted.attestation import get_msg3
@@ -50,7 +50,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def perform_attestation(self, client_socket: socket.socket):
         self.send_msg0(client_socket)
 
-        with RemoteAttestationContext(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
+        with remote_attestation_context(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
 
             public_key = get_new_public_key(ra_context)
 
