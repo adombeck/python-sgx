@@ -6,6 +6,7 @@ import json
 import logging
 import argparse
 
+from sgx.util import check_json
 from sgx.socket_util import receive_bytes
 from sgx.untrusted.attestation import get_extended_epid_group_id
 from sgx.untrusted.attestation import initialize_quoting_enclave
@@ -31,7 +32,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         received_raw = receive_bytes(client_socket)
         received_json = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(received_json, dict))
+        check_json(received_json, dict)
 
         request = received_json["request"]
         self.logger.info("Got request %r", request)
@@ -80,7 +81,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         self.logger.info("Waiting for report")
         received_raw = receive_bytes(client_socket)
         received_json = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(received_json, dict))
+        check_json(received_json, dict, 1)
 
         return bytes.fromhex(received_json["report"])
 

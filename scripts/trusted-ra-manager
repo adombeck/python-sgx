@@ -7,7 +7,7 @@ import logging
 import argparse
 import struct
 
-from sgx.util import get_attester_public_key
+from sgx.util import get_attester_public_key, check_json
 from sgx.socket_util import receive_bytes
 
 try:
@@ -117,8 +117,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(received_json, dict))
-        assert (len(received_json) == 1)
+        check_json(received_json, dict, 1)
 
         return received_json["EPID"]
 
@@ -159,8 +158,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(received_json, dict))
-        assert (len(received_json) == 1)
+        check_json(received_json, dict, 1)
 
         return bytes.fromhex(received_json["qe_target_info"])
 
@@ -170,7 +168,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         received_raw = receive_bytes(client_socket)
 
         msg2 = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(msg2, dict))
+        check_json(msg2, dict, 7)
 
         attester_public_key = bytes.fromhex(msg2["public_key"])
         spid = bytes.fromhex(msg2["spid"])
@@ -229,8 +227,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(received_json, dict))
-        assert (len(received_json) == 2)
+        check_json(received_json, dict, 2)
 
         return bytes.fromhex(received_json["quote"]), bytes.fromhex(received_json["qe_report"])
 
@@ -241,10 +238,10 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def receive_msg4(self, client_socket: socket.socket):
         self.logger.info("Waiting for msg4")
         received_raw = receive_bytes(client_socket)
-        msg2 = json.loads(received_raw.decode('utf8'))
-        assert (isinstance(msg2, dict))
+        msg4 = json.loads(received_raw.decode('utf8'))
+        check_json(msg4, dict, 1)
 
-        verification_result = msg2["verification_result"]
+        verification_result = msg4["verification_result"]
 
         return verification_result
 
