@@ -8,7 +8,7 @@ loader.env.PATH = /usr/bin:/bin
 loader.env.USERNAME =
 loader.env.HOME =
 loader.env.PWD =
-loader.debug_type = inline
+loader.debug_type = none
 
 fs.mount.lib1.type = chroot
 fs.mount.lib1.path = /graphene
