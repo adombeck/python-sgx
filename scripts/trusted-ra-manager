@@ -90,7 +90,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def send_msg0(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg0")
         epid = self.get_epid()
-        msg0 = json.dumps({"EPID": epid}).encode()
+        msg0 = json.dumps({"epid": epid}).encode()
         self.logger.info("Sending msg0")
         client_socket.sendall(msg0)
 
@@ -111,7 +111,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         check_json(received_json, dict, 1)
-        return received_json["EPID"]
+        return received_json["epid"]
 
     # -------------------------------------------------------------------------
     # MSG1

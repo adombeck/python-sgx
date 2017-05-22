@@ -62,7 +62,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def send_epid(self, client_socket: socket.socket, epid):
         self.logger.info("Preparing to send EPID")
 
-        msg = json.dumps({"EPID": epid}).encode()
+        msg = json.dumps({"epid": epid}).encode()
 
         self.logger.info("Sending EPID (message size: %r)", len(msg))
         client_socket.sendall(msg)
