@@ -37,13 +37,13 @@ class RequestHandler(socketserver.StreamRequestHandler):
         request = received_json["request"]
         self.logger.info("Got request %r", request)
 
-        if request == "GET EPID":
-            epid = get_extended_epid_group_id()
-            self.send_epid(client_socket, epid)
+        if request == "GET extended_epid_gid":
+            extended_epid_gid = get_extended_epid_group_id()
+            self.send_extended_epid_gid(client_socket, extended_epid_gid)
 
         if request == "INIT QE":
-            qe_target_info = initialize_quoting_enclave()
-            self.send_qe_target_info(client_socket, qe_target_info)
+            qe_target_info, epid_gid = initialize_quoting_enclave()
+            self.send_qe_init_response(client_socket, qe_target_info, epid_gid)
 
         if request == "GET QUOTE":
             report = bytes.fromhex(received_json["report"])
@@ -59,23 +59,24 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
             self.send_quote(client_socket, quote, qe_report)
 
-    def send_epid(self, client_socket: socket.socket, epid):
-        self.logger.info("Preparing to send EPID")
+    def send_extended_epid_gid(self, client_socket: socket.socket, extended_epid_gid):
+        self.logger.info("Preparing to send extended EPID group ID")
 
-        msg = json.dumps({"epid": epid}).encode()
+        msg = json.dumps({"extended_epid_gid": extended_epid_gid}).encode()
 
-        self.logger.info("Sending EPID (message size: %r)", len(msg))
+        self.logger.info("Sending extended EPID group ID (message size: %r)", len(msg))
         client_socket.sendall(msg)
-        self.logger.info("EPID sent")
+        self.logger.info("Extended EPID group ID sent")
 
-    def send_qe_target_info(self, client_socket: socket.socket, qe_target_info):
-        self.logger.info("Preparing to send quoting enclave target info")
+    def send_qe_init_response(self, client_socket: socket.socket, qe_target_info, epid_gid):
+        self.logger.info("Preparing to send quoting enclave init response")
 
-        msg = json.dumps({"qe_target_info": qe_target_info.hex()}).encode()
+        msg = json.dumps({"qe_target_info": qe_target_info.hex(),
+                          "epid_gid": epid_gid.hex()}).encode()
 
-        self.logger.info("Sending quoting enclave target info (message size: %r)", len(msg))
+        self.logger.info("Sending quoting enclave init response (message size: %r)", len(msg))
         client_socket.sendall(msg)
-        self.logger.info("Quoting enclave target info sent")
+        self.logger.info("Quoting enclave init response sent")
 
     def receive_report(self, client_socket: socket.socket):
         self.logger.info("Waiting for report")

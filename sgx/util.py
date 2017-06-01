@@ -16,4 +16,4 @@ def check_json(data, type_, length=None):
         raise TypeError("Received JSON is of type %r, expected type %r" % (type(data), type_))
 
     if length and len(data) != length:
-        raise UnexpectedLengthError("Received JSON %r has length %r, expected length %r" % (type_, data, length))
+        raise UnexpectedLengthError("Received JSON %r has length %r, expected length %r" % (data, len(data), length))

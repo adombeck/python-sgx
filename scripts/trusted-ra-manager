@@ -72,7 +72,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         with remote_attestation_context(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
 
-            self.public_key = get_new_public_key(ra_context)
+            self.create_msg1(ra_context)
             self.send_msg1(client_socket)
 
             self.receive_msg2(client_socket)
@@ -83,55 +83,52 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
             self.receive_msg4(client_socket)
 
+    def start_application(self):
+        import subprocess
+        # import os
+        # os.chdir("/var/lib/python-sgx/")
+        # subprocess.run(APPLICATION)
+        pass
+
     # -------------------------------------------------------------------------
     # MSG0
     # -------------------------------------------------------------------------
 
     def send_msg0(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg0")
-        epid = self.get_epid()
-        msg0 = json.dumps({"epid": epid}).encode()
+        extended_epid_gid = self.get_extended_epid_gid()
+        msg0 = json.dumps({"extended_epid_gid": extended_epid_gid}).encode()
         self.logger.info("Sending msg0")
         client_socket.sendall(msg0)
 
-    def get_epid(self):
+    def get_extended_epid_gid(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", ura_manager_port))
-            self.send_epid_request(ura_socket)
-            return self.receive_epid(ura_socket)
+            self.send_extended_epid_gid_request(ura_socket)
+            return self.receive_extended_epid_gid(ura_socket)
 
-    def send_epid_request(self, ura_socket: socket.socket):
-        self.logger.info("Sending EPID request")
-        msg = json.dumps({"request": "GET EPID"}).encode()
+    def send_extended_epid_gid_request(self, ura_socket: socket.socket):
+        self.logger.info("Sending extended EPID group ID request")
+        msg = json.dumps({"request": "GET extended_epid_gid"}).encode()
         ura_socket.sendall(msg)
-        self.logger.info("EPID request sent")
+        self.logger.info("Extended EPID group ID request sent")
 
-    def receive_epid(self, ura_socket: socket.socket()):
-        self.logger.info("Waiting for EPID")
+    def receive_extended_epid_gid(self, ura_socket: socket.socket()):
+        self.logger.info("Waiting for extended EPID group ID")
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
         check_json(received_json, dict, 1)
-        return received_json["epid"]
+        return received_json["extended_epid_gid"]
 
     # -------------------------------------------------------------------------
     # MSG1
-    # -------------------------------------------------------------------------
-
-    def send_msg1(self, client_socket: socket.socket):
-        self.logger.info("Preparing to send msg1")
-        msg1 = json.dumps({"public_key": self.public_key.hex()}).encode()
-        self.logger.info("Sending msg1")
-        client_socket.sendall(msg1)
-
-    # -------------------------------------------------------------------------
-    # MSG2
     # -------------------------------------------------------------------------
 
     def initialize_quoting_enclave(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
             ura_socket.connect(("127.0.0.1", ura_manager_port))
             self.send_qe_init_request(ura_socket)
-            return self.receive_qe_target_info(ura_socket)
+            return self.receive_qe_init_response(ura_socket)
 
     def send_qe_init_request(self, ura_socket: socket.socket):
         self.logger.info("Sending quoting enclave initialization request")
@@ -139,12 +136,27 @@ class RequestHandler(socketserver.StreamRequestHandler):
         ura_socket.sendall(msg)
         self.logger.info("Quoting enclave initialization request sent")
 
-    def receive_qe_target_info(self, ura_socket: socket.socket()):
+    def receive_qe_init_response(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for quoting enclave target info")
         received_raw = receive_bytes(ura_socket)
         received_json = json.loads(received_raw.decode('utf8'))
-        check_json(received_json, dict, 1)
-        return bytes.fromhex(received_json["qe_target_info"])
+        check_json(received_json, dict, 2)
+        return bytes.fromhex(received_json["qe_target_info"]), bytes.fromhex(received_json["epid_gid"])
+
+    def create_msg1(self, ra_context):
+        self.public_key = get_new_public_key(ra_context)
+        self.qe_target_info, self.epid_gid = self.initialize_quoting_enclave()
+
+    def send_msg1(self, client_socket: socket.socket):
+        self.logger.info("Preparing to send msg1")
+        msg1 = json.dumps({"public_key": self.public_key.hex(),
+                           "epid_gid": self.epid_gid.hex()}).encode()
+        self.logger.info("Sending msg1")
+        client_socket.sendall(msg1)
+
+    # -------------------------------------------------------------------------
+    # MSG2
+    # -------------------------------------------------------------------------
 
     def receive_msg2(self, client_socket: socket.socket):
         self.logger.info("Waiting for msg2")
@@ -165,8 +177,6 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def process_msg2(self, ra_context):
         self.logger.info("Processing msg2")
-
-        self.qe_target_info = self.initialize_quoting_enclave()
 
         self.report, self.nonce = process_msg2(
             ra_context,
@@ -249,7 +259,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         msg4 = json.loads(received_raw.decode('utf8'))
         check_json(msg4, dict, 1)
         self.logger.info("Msg4 received")
-        return msg4["verification_result"]
+        self.verification_result = msg4["verification_result"]
 
 
 class Manager(object):

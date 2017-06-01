@@ -28,7 +28,7 @@ $(NAME)_wrap.c: $(NAME).i
 	swig -python -I$(SDK)/include -I$(SWIG_LIB) $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
-	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
+	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I$(SWIG_LIB) -I/usr/include/python3.5 -ldl
 
 $(NAME).o: $(NAME).c $(SRC)
 	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
