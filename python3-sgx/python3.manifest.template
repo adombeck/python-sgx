@@ -1,8 +1,8 @@
 #!$(PAL)
 
 loader.preload = file:$(RUNTIME)/libsysdb.so
-loader.exec = file:/usr/bin/python$(PYTHON_VERSION)
-loader.execname = python$(PYTHON_VERSION)
+loader.exec = file:/usr/bin/python3
+loader.execname = python3
 loader.env.LD_LIBRARY_PATH = /graphene:/host:/usr/lib:/usr/lib/x86_64-linux-gnu
 loader.env.PATH = /usr/bin:/bin
 loader.env.USERNAME =
