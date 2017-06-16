@@ -17,6 +17,10 @@ uint8_t* g_unsealed_secret;
 uint8_t* g_unsealed_plain_text;
 
 
+// XXX: Use sgx_seal_data_ex and add seal_to_signer option (default to False, i.e. seal to enclave by default, because
+//      a remote attester cannot trust secrets sealed to signer to remain secret)
+
+
 int seal_data(uint8_t* secret, uint32_t secret_len, uint8_t* plain_text, uint32_t plain_text_len, sgx_sealed_data_t* sealed_buf)
 {
     fprintf(stderr, "Sealing data\n");
