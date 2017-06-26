@@ -42,7 +42,6 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 		-Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive \
 		-Wl,--start-group \
 			-lsgx_tstdc \
-			-lsgx_tstdcxx \
 			-lsgx_tkey_exchange \
 			-lsgx_tcrypto \
 			-lsgx_tservice \
@@ -66,7 +65,6 @@ exec: $(NAME).o call_tables.o
 		-Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive \
 		-Wl,--start-group \
 			-lsgx_tstdc \
-			-lsgx_tstdcxx \
 			-lsgx_tkey_exchange \
 			-lsgx_tcrypto \
 			-lsgx_tservice \
