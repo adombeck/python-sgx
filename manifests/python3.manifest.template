@@ -34,6 +34,10 @@ fs.mount.tests.type = chroot
 fs.mount.tests.path = /tests
 fs.mount.tests.uri = file:$(TESTS_DIR)
 
+fs.mount.sealed.type = chroot
+fs.mount.sealed.path = /sealed
+fs.mount.sealed.uri = file:/var/lib/python-sgx/sealed
+
 net.allow_bind.1 = 127.0.0.1:6789
 
 sys.stack.size = 256K
@@ -57,7 +61,13 @@ sgx.trusted_files.libstdcpp = file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
 sgx.trusted_files.attester_public_key = file:/etc/python-sgx/attester_public.key
 
+# for sealing
+sgx.trusted_files.sealing = file:/usr/local/bin/sealing
+sgx.trusted_files.sealing_manifest = file:/etc/python-sgx/sealing_manifest
+sgx.allowed_files.sealed = file:/var/lib/python-sgx/sealed
+
 sgx.allowed_files.pyhome = file:/usr/lib/python$(PYTHON_VERSION)
+sgx.allowed_files.pyhome2 = file:/usr/lib/python3
 sgx.allowed_files.pyhome_local = file:/usr/local/lib/python$(PYTHON_VERSION)
 
 sgx.allowed_files.tests = file:$(TESTS_DIR)

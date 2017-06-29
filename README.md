@@ -33,6 +33,13 @@ Currently, this project does not provide functions to *create* an enclave. Inste
         ./setup.sh
 
 
+5. Add your user to the `sgx` group:
+
+        sudo usermod -a -G sgx $USER
+
+	 Remember that this change will only take effect after a new login.
+
+
 ## Uninstallation
 
 1. Run the uninstallation script:
@@ -41,8 +48,11 @@ Currently, this project does not provide functions to *create* an enclave. Inste
 
 
 ## Run tests
+
     python3-sgx tests/test_seal.py seal
     python3-sgx tests/test_seal.py unseal
+
+Note: You have to be in the repositories base directory to be able to run the tests. 
 
 ## Test remote attestation
 Note: You need to install the [python-sgx-attester](https://github.com/adombeck/python-sgx-attester) to connect to the remote attestation manager

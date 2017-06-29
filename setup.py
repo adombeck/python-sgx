@@ -9,7 +9,6 @@ https://github.com/pypa/sampleproject
 import os
 import sh
 import subprocess
-import platform
 # To use a consistent encoding
 from codecs import open
 from distutils.version import LooseVersion
@@ -40,29 +39,38 @@ except sh.ErrorReturnCode_1:
 
 here = os.path.abspath(os.path.dirname(__file__))
 
-
 # Link graphene's pal launcher to /usr/bin/graphene-pal
 pal = "/usr/bin/graphene-pal"
 if not os.path.islink(pal):
     subprocess.check_call(["ln", "-s", os.path.join(GRAPHENE_DIR, "Runtime/pal-Linux-SGX"), pal])
 
+# Create sgx group (if it doesn't exist)
+try:
+    sh.groupadd(config.GROUP)
+except sh.ErrorReturnCode_9:
+    pass
 
-# Create the key directory
-sh.install("-m", "755", "-d", config.KEY_DIR)
-
+# Create the config directory
+sh.install("-m", "750", "-g", config.GROUP, "-d", config.CONFIG_DIR)
 
 # Create the data directory
-sh.install("-m", "755", "-d", config.DATA_DIR)
+sh.install("-m", "770", "-g", config.GROUP, "-d", config.DATA_DIR)
+
+# Create the sealed directory
+sh.install("-m", "770", "-g", config.GROUP, "-d", config.SEALED_DIR)
 
 
 # Copy trusted-ra-manager to `/usr/local/bin/`.
 # If trusted-ra-manager is included in the `scripts` argument to setup(), setup() creates a script
 # which uses run_script() to execute the actual script, thereby ignoring our custom shebang to run python3-sgx.
 sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
+sh.cp("scripts/sealing", "/usr/local/bin/")
 
+# Copy sealing manifest to the data directory
+sh.cp("manifests/sealing_manifest", config.CONFIG_DIR)
 
 # Create python3 sgx launcher in the data directory
-sh.cp("python3-sgx/python3.manifest.template", config.DATA_DIR)
+sh.cp("manifests/python3.manifest.template", config.DATA_DIR)
 create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
 sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
 create_manifest(config.DATA_DIR)
