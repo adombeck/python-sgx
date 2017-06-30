@@ -21,6 +21,8 @@ config = importlib.import_module("sgx.config")
 
 GRAPHENE_DIR = os.path.abspath("./graphene/")
 
+# Copy config file
+sh.cp("config/config.py", "sgx/config.py")
 
 # Check if swig >= 3.0.10 is installed
 out = sh.grep(sh.dpkg("-s", "swig", "swig3.0", _ok_code=[0,1]), '^Version:')
@@ -62,7 +64,7 @@ sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
 
 
 # Create python3 sgx launcher in the data directory
-sh.cp("python3-sgx/python3.manifest.template", config.DATA_DIR)
+sh.cp("config/python3.manifest.template", config.DATA_DIR)
 create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
 sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
 create_manifest(config.DATA_DIR)
