@@ -15,6 +15,10 @@ from distutils.version import LooseVersion
 
 from setuptools import setup, find_packages
 
+# Copy config file
+sh.cp("config/config.py", "sgx/config.py")
+
+
 import importlib
 config = importlib.import_module("sgx.config")
 
@@ -66,11 +70,11 @@ sh.install("-m", "770", "-g", config.GROUP, "-d", config.SEALED_DIR)
 sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
 sh.cp("scripts/sealing", "/usr/local/bin/")
 
-# Copy sealing manifest to the data directory
-sh.cp("manifests/sealing_manifest", config.CONFIG_DIR)
+# Copy sealing config file to the config directory
+sh.cp("config/sealed", config.CONFIG_DIR)
 
 # Create python3 sgx launcher in the data directory
-sh.cp("manifests/python3.manifest.template", config.DATA_DIR)
+sh.cp("config/python3.manifest.template", config.DATA_DIR)
 create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
 sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
 create_manifest(config.DATA_DIR)
