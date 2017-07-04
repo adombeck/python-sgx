@@ -18,6 +18,10 @@ MANIFEST_PATH = os.path.join(config.CONFIG_DIR, 'sealing_manifest')
 # XXX: Implement replay protection (not implemented in SDK yet)
 
 
+class PersistentFileNotFoundError(Exception):
+    pass
+
+
 @contextmanager
 def handle_sealing(manifest_path):
     unseal(manifest_path)
@@ -42,7 +46,7 @@ def unseal(manifest_path):
 
         try:
             unseal_mapping(persistent_path, ephemeral_path)
-        except FileNotFoundError:
+        except PersistentFileNotFoundError:
             create_empty(persistent_path)
             create_empty(ephemeral_path)
 
@@ -66,16 +70,19 @@ def unseal_directory(ephemeral_path, persistent_path):
 
 
 def unseal_file(ephemeral_path, persistent_path):
-    with open(persistent_path, 'br') as source:
-        data = source.read()
+    try:
+        with open(persistent_path, 'br') as source:
+            data = source.read()
+    except FileNotFoundError:
+        raise PersistentFileNotFoundError
 
-        if data:
-            secret, plain_text = sealing.unseal(data)
-        else:
-            secret = bytes()
+    if data:
+        secret, plain_text = sealing.unseal(data)
+    else:
+        secret = bytes()
 
-        with open(ephemeral_path, 'bw') as dest:
-            dest.write(secret)
+    with open(ephemeral_path, 'bw') as dest:
+        dest.write(secret)
 
 
 def create_empty(path):
