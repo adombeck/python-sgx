@@ -2,7 +2,6 @@
 
 %{
 #define SWIG_PYTHON_STRICT_BYTE_CHAR
-#include "sgx_tseal.h"
 #include "sgx_key.h"
 #include "sgx_error.h"
 #include "sgx_defs.h"
@@ -40,7 +39,6 @@ extern void get_quote(
 %include "cstring.i"
 
 %include "sgx_defs.h"
-%include "sgx_tseal.h"
 
 %include "epid_group_id.i"
 %include "target_info.i"

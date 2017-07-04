@@ -7,15 +7,8 @@ PROJECT_HOME = ../../..
 
 include $(PROJECT_HOME)/Makefile.config
 
-SDK_LIB = $(SDK)/lib64
-LIB = $(PROJECT_HOME)/lib
 UTILS = $(PROJECT_HOME)/utils
-SWIG_LIB = $(LIB)/swig
-
-SRC = $(LIB)/memset_s.c $(LIB)/rdrand.c $(LIB)/sgx_aes_gcm.cpp $(LIB)/sgx_create_report.cpp $(LIB)/sgx_get_key.cpp $(LIB)/sgx_read_rand.cpp $(LIB)/trts.c $(LIB)/trts_pic.S
-
-LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
-# $(SDK_LIB)/libsgx_tkey_exchange.a $(SDK_LIB)/libsgx_ukey_exchange.a $(SDK_LIB)/libsgx_tsetjmp.a $(SDK_LIB)/libsgx_tstdcxx.a
+SWIG_LIB = $(PROJECT_HOME)/lib/swig
 
 INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
@@ -25,19 +18,19 @@ $(NAME).i:
 	chmod 444 $(NAME).i
 
 $(NAME)_wrap.c: $(NAME).i
-	swig -python -I$(SDK)/include -I$(SWIG_LIB) $<
+	swig -Wall -python -I$(SDK)/include -I$(SWIG_LIB) $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
-	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I$(SWIG_LIB) -I/usr/include/python3.5 -ldl
+	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I$(SWIG_LIB) -I/usr/include/python3.5 -ldl
 
-$(NAME).o: $(NAME).c $(SRC)
-	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
+$(NAME).o: $(NAME).c
+	gcc -Wall -Werror -fPIC -c $^ $(INCLUDES) -I/usr/include/python3.5
 
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o
-	gcc -Wall -shared *.o $(LIBS) -lsgx_uae_service -o $@
+	gcc -Wall -Werror -shared *.o -lsgx_uae_service -o $@ -Wl,--trace-symbol,sgx_rijndael128GCM_encrypt
 
 exec: $(NAME).o
-	gcc -g -Wall $^ $(LIBS) \
+	gcc -g -Wall -Werror $^ \
 	    -lsgx_uae_service \
 	    -lpython3.5m
 
