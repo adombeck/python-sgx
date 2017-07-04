@@ -8,10 +8,7 @@ PROJECT_HOME = ../../..
 include $(PROJECT_HOME)/Makefile.config
 
 SDK_LIB = $(SDK)/lib64
-LIB = $(PROJECT_HOME)/lib
 UTILS = $(PROJECT_HOME)/utils
-
-SRC = $(LIB)/memset_s.c $(LIB)/rdrand.c $(LIB)/sgx_aes_gcm.cpp $(LIB)/sgx_create_report.cpp $(LIB)/sgx_get_key.cpp $(LIB)/sgx_read_rand.cpp $(LIB)/trts.c $(LIB)/trts_pic.S
 
 LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
 # $(SDK_LIB)/libsgx_tkey_exchange.a $(SDK_LIB)/libsgx_ukey_exchange.a $(SDK_LIB)/libsgx_tsetjmp.a $(SDK_LIB)/libsgx_tstdcxx.a
@@ -25,13 +22,33 @@ $(NAME)_wrap.c: $(NAME).i
 	swig -python -I$(SDK)/include $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
-	gcc -Wall -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
+	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5 -ldl
 
-$(NAME).o: $(NAME).c $(SRC)
-	gcc -Wall -fPIC -c $^ -I$(LIB) $(INCLUDES) -I/usr/include/python3.5
+$(NAME).o: $(NAME).c
+	gcc -Wall -Werror -fPIC -c $^ $(INCLUDES) -I/usr/include/python3.5
 
-$(SO_NAME): $(NAME).o $(NAME)_wrap.o
-	gcc -Wall -shared *.o $(LIBS) -o $@
+$(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
+	gcc -g -Wall -Werror  -shared $^ -o $@ \
+		-I$(SDK)/include \
+		-I/usr/include/python3.5 \
+		-shared-libgcc \
+		-L$(SDK)/lib64 \
+		-Wl,-Bstatic \
+		-lprotobuf \
+		-Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive \
+		-Wl,--start-group \
+			-lsgx_tstdc \
+			-lsgx_tkey_exchange \
+			-lsgx_tcrypto \
+			-lsgx_tservice \
+		-Wl,--end-group \
+		-Wl,-Bsymbolic \
+		-Wl,--defsym,__ImageBase=0 \
+		-Wl,--allow-multiple-definition \
+		-Wl,-Bdynamic -lsgx_uae_service -lsgx_ukey_exchange
+
+call_tables.o: call_tables.c
+	gcc -g -Wall -Werror  -fPIC -c $^ -iquote$(SDK)/include/tlibc -I$(SDK)/include
 
 .PHONY: clean
 clean:
