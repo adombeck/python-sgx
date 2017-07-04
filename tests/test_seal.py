@@ -30,6 +30,10 @@ def unseal():
     print("plain text: %r" % plain_text)
 
 
+def exception():
+    sgx.trusted.sealing.seal(b"")
+
+
 def print_usage():
     print("Usage: %s (seal|unseal)" % sys.argv[0])
 
@@ -43,6 +47,8 @@ def main():
         seal()
     elif sys.argv[1] == "unseal":
         unseal()
+    elif sys.argv[1] == "exception":
+        exception()
     else:
         print_usage()
 

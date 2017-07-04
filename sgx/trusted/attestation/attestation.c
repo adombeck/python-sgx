@@ -6,11 +6,13 @@
 #include <Python.h>
 
 #include "sgx_tkey_exchange.h"
-#include "sgx_tkey_exchange_t.h"
 #include "sgx_ukey_exchange.h"
 #include "sgx_uae_service.h"
 #include "sgx_utils.h"
 
+sgx_status_t sgx_ra_get_ga(sgx_ra_context_t context, sgx_ec256_public_t* g_a);
+sgx_status_t sgx_ra_proc_msg2_trusted(sgx_ra_context_t context, const sgx_ra_msg2_t* p_msg2, const sgx_target_info_t* p_qe_target, sgx_report_t* p_report, sgx_quote_nonce_t* p_nonce);
+sgx_status_t sgx_ra_get_msg3_trusted(sgx_ra_context_t context, uint32_t quote_size, sgx_report_t* qe_report, sgx_ra_msg3_t* p_msg3, uint32_t msg3_size);
 
 static char error_message[256];
 static int error_status = 0;
@@ -176,10 +178,11 @@ void get_msg3(sgx_ra_context_t context,
     uint32_t msg3_size = sizeof(sgx_ra_msg3_t) + quote_size;
     sgx_ra_msg3_t* p_msg3 = malloc(msg3_size);
     if(!p_msg3)
-        {
-            snprintf(error_message, 256, "Failed to allocate memory for msg3\n");
-            error_status = 1;
-        }
+    {
+        snprintf(error_message, 256, "Failed to allocate memory for msg3\n");
+        error_status = 1;
+        return;
+    }
     memset(p_msg3, 0, msg3_size);
 
     memcpy(&p_msg3->quote, quote, quote_size);
@@ -188,12 +191,14 @@ void get_msg3(sgx_ra_context_t context,
     if(ret != SGX_SUCCESS)
     {
         snprintf(error_message, 256, "Failed to call sgx_ra_get_msg3_trusted. Error code: 0x%x\n", ret);
-            error_status = 1;
+        error_status = 1;
+        goto cleanup;
     }
 
     memcpy(p_mac, &p_msg3->mac, sizeof(sgx_mac_t));
     memcpy(platform_service_security_properties, &p_msg3->ps_sec_prop, sizeof(sgx_ps_sec_prop_desc_t));
 
+cleanup:
     // Clear msg3 and free it
     memset(p_msg3, 0, msg3_size);
     free(p_msg3);

@@ -9,10 +9,7 @@ UTILS = $(PROJECT_HOME)/utils
 
 include $(PROJECT_HOME)/Makefile.config
 
-SDK_LIB = $(SDK)/lib64
 SWIG_LIB = $(PROJECT_HOME)/lib/swig
-
-INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
 $(NAME).i:
 	echo "// Generated from $(NAME).i.template\n" > $(NAME).i
@@ -20,13 +17,13 @@ $(NAME).i:
 	chmod 444 $(NAME).i
 
 $(NAME)_wrap.c: $(NAME).i
-	swig -Werror -python -I$(SDK)/include -I$(SWIG_LIB) $<
+	swig -Wall -Werror -python -I$(SDK)/include -I$(SWIG_LIB) $<
 
 $(NAME)_wrap.o: $(NAME)_wrap.c
 	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I$(SWIG_LIB) -I/usr/include/python3.5 -ldl
 
 $(NAME).o: $(NAME).c
-	gcc -Wall -Werror -fPIC -c $^ $(INCLUDES) -I/usr/include/python3.5
+	gcc -Wall -Werror -fPIC -c $^ -I$(SDK)/include -I/usr/include/python3.5
 
 $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 	gcc -g -Wall -Werror  -shared $^ -o $@ \
@@ -44,11 +41,10 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 		-Wl,--end-group \
 		-Wl,-Bsymbolic \
 		-Wl,--defsym,__ImageBase=0 \
-		-Wl,--allow-multiple-definition \
 		-Wl,-Bdynamic -lsgx_uae_service -lsgx_ukey_exchange
 
 call_tables.o: call_tables.c
-	gcc -g -Wall -Werror  -fPIC -c $^ -iquote$(SDK)/include/tlibc -I$(SDK)/include
+	gcc -g -Wall -Werror  -fPIC -c $^ -I$(SDK)/include
 
 exec: $(NAME).o call_tables.o
 	gcc -g -Wall -Werror $^ -o $@ \
@@ -67,7 +63,6 @@ exec: $(NAME).o call_tables.o
 		-Wl,--end-group \
 		-Wl,-Bsymbolic \
 		-Wl,--defsym,__ImageBase=0 \
-		-Wl,--allow-multiple-definition \
 		-Wl,-Bdynamic -lsgx_uae_service -lsgx_ukey_exchange
 
 	$(UTILS)/create_manifest.py
