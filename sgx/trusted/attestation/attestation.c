@@ -10,7 +10,6 @@
 #include "sgx_ukey_exchange.h"
 #include "sgx_uae_service.h"
 #include "sgx_utils.h"
-#include "global_data.h"
 
 
 static char error_message[256];
@@ -204,11 +203,6 @@ void get_msg3(sgx_ra_context_t context,
 int main()
 {
     fprintf(stderr, "&g_sp_pub_key: %p\n", &g_sp_pub_key);
-    fprintf(stderr, "&g_global_data: %p\n", &g_global_data);
-    fprintf(stderr, "g_global_data.enclave_size: %lx\n", g_global_data.enclave_size);
-    fprintf(stderr, "g_global_data.heap_size: %lx\n", g_global_data.heap_size);
-    //fprintf(stderr, "enclave_base: %x\n", get_enclave_base());
-    fprintf(stderr, "__ImageBase: %p\n", &__ImageBase);
 
     sgx_ra_context_t context = INT_MAX;
     initialize_remote_attestation(g_sp_pub_key, 0, &context);

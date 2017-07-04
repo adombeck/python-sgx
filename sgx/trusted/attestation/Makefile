@@ -10,10 +10,7 @@ UTILS = $(PROJECT_HOME)/utils
 include $(PROJECT_HOME)/Makefile.config
 
 SDK_LIB = $(SDK)/lib64
-LIB = $(PROJECT_HOME)/lib
-SWIG_LIB = $(LIB)/swig
-
-LIBS = $(SDK_LIB)/libsgx_tcrypto.a $(SDK_LIB)/libsgx_tservice.a
+SWIG_LIB = $(PROJECT_HOME)/lib/swig
 
 INCLUDES = -I$(SDK)/include -I$(SDK_GIT_DIR)/common/inc -I$(SDK_GIT_DIR)/common/inc/internal -I$(SDK_GIT_DIR)/external/crypto_px/include -I$(SDK_GIT_DIR)/sdk/trts/linux -I$(SDK_GIT_DIR)/external/rdrand -I$(SDK_GIT_DIR)/sdk/tseal
 
@@ -38,7 +35,6 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 		-shared-libgcc \
 		-L$(SDK)/lib64 \
 		-Wl,-Bstatic \
-		-lprotobuf \
 		-Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive \
 		-Wl,--start-group \
 			-lsgx_tstdc \
@@ -54,17 +50,17 @@ $(SO_NAME): $(NAME).o $(NAME)_wrap.o call_tables.o
 call_tables.o: call_tables.c
 	gcc -g -Wall -Werror  -fPIC -c $^ -iquote$(SDK)/include/tlibc -I$(SDK)/include
 
-exec: $(NAME).o call_tables.o 
-	gcc -g -Wall -Werror  $^ -o $@ \
+exec: $(NAME).o call_tables.o
+	gcc -g -Wall -Werror $^ -o $@ \
 		-I$(SDK)/include \
 		-I/usr/include/python3.5 \
 		-shared-libgcc \
 		-L$(SDK)/lib64 \
 		-Wl,-Bstatic \
-		-lprotobuf \
 		-Wl,--whole-archive -lsgx_trts -Wl,--no-whole-archive \
 		-Wl,--start-group \
 			-lsgx_tstdc \
+			-lsgx_tstdcxx \
 			-lsgx_tkey_exchange \
 			-lsgx_tcrypto \
 			-lsgx_tservice \
