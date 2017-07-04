@@ -71,4 +71,4 @@ exec: $(NAME).o call_tables.o
 
 .PHONY: clean
 clean:
-	rm -rf $(NAME).i $(NAME)_wrap.c $(SO_NAME) $(NAME)_swig.py *.o exec
+	rm -rf $(NAME).i $(NAME)_wrap.c $(SO_NAME) $(NAME)_swig.py *.o exec *.sig *.token *.manifest.sgx *.manifest
