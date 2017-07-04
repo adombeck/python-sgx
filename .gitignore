@@ -13,3 +13,4 @@ build
 dist
 *.sealed
 scratch
+sgx/config.py
