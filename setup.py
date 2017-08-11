@@ -73,14 +73,8 @@ sh.install("-m", "770", "-g", config.GROUP, "-d", config.SEALED_DIR)
 sh.cp("scripts/sgx-ra-manager", "/usr/local/bin/")
 sh.cp("scripts/sealing", "/usr/local/bin/")
 
-
-# Create python3 sgx launcher in the data directory
-sh.cp("config/python3.manifest.template", config.DATA_DIR)
-create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
-sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
-create_manifest(config.DATA_DIR, _fg=True)
-sign_manifest(config.DATA_DIR, _fg=True)
-
+# Copy sealing manifest to config directory
+sh.cp("config/sealing", config.CONFIG_DIR)
 
 # Get the long description from the README file
 with open(os.path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -180,3 +174,10 @@ dist = setup(
     #     ],
     # },
 )
+
+# Create python3 sgx launcher in the data directory
+sh.cp("config/python3.manifest.template", config.DATA_DIR)
+create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
+sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
+create_manifest(config.DATA_DIR, _fg=True)
+sign_manifest(config.DATA_DIR, _fg=True)
