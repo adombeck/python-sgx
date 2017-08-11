@@ -2,12 +2,11 @@
 
 import socketserver
 import socket
-import json
 import logging
 import argparse
 
-from sgx.util import check_json
-from sgx.socket_util import receive_bytes
+from sgx.util import check_msg
+from sgx.socket_util import send_msg, receive_msg
 from sgx.untrusted.attestation import get_extended_epid_group_id
 from sgx.untrusted.attestation import initialize_quoting_enclave
 from sgx.untrusted.attestation import get_quote_size
@@ -30,11 +29,10 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def handle(self):
         client_socket = self.request
 
-        received_raw = receive_bytes(client_socket)
-        received_json = json.loads(received_raw.decode('utf8'))
-        check_json(received_json, dict)
+        msg = receive_msg(client_socket)
+        check_msg(msg, dict)
 
-        request = received_json["request"]
+        request = msg["request"]
         self.logger.info("Got request %r", request)
 
         if request == "GET extended_epid_gid":
@@ -46,11 +44,11 @@ class RequestHandler(socketserver.StreamRequestHandler):
             self.send_qe_init_response(client_socket, qe_target_info, epid_gid)
 
         if request == "GET QUOTE":
-            report = bytes.fromhex(received_json["report"])
-            quote_type = received_json["quote_type"]
-            spid = bytes.fromhex(received_json["spid"])
-            nonce = bytes.fromhex(received_json["nonce"])
-            revocation_list = bytes.fromhex(received_json["revocation_list"])
+            report = bytes.fromhex(msg["report"])
+            quote_type = msg["quote_type"]
+            spid = bytes.fromhex(msg["spid"])
+            nonce = bytes.fromhex(msg["nonce"])
+            revocation_list = bytes.fromhex(msg["revocation_list"])
 
             self.logger.warning("revocation list: %r", revocation_list)
 
@@ -60,38 +58,27 @@ class RequestHandler(socketserver.StreamRequestHandler):
             self.send_quote(client_socket, quote, qe_report)
 
     def send_extended_epid_gid(self, client_socket: socket.socket, extended_epid_gid):
-        self.logger.info("Preparing to send extended EPID group ID")
-
-        msg = json.dumps({"extended_epid_gid": extended_epid_gid}).encode()
-
+        msg = {"extended_epid_gid": extended_epid_gid}
         self.logger.info("Sending extended EPID group ID (message size: %r)", len(msg))
-        client_socket.sendall(msg)
+        send_msg(client_socket, msg)
         self.logger.info("Extended EPID group ID sent")
 
     def send_qe_init_response(self, client_socket: socket.socket, qe_target_info, epid_gid):
-        self.logger.info("Preparing to send quoting enclave init response")
-
-        msg = json.dumps({"qe_target_info": qe_target_info.hex(),
-                          "epid_gid": epid_gid.hex()}).encode()
-
+        msg = {"qe_target_info": qe_target_info.hex(), "epid_gid": epid_gid.hex()}
         self.logger.info("Sending quoting enclave init response (message size: %r)", len(msg))
-        client_socket.sendall(msg)
+        send_msg(client_socket, msg)
         self.logger.info("Quoting enclave init response sent")
 
     def receive_report(self, client_socket: socket.socket):
         self.logger.info("Waiting for report")
-        received_raw = receive_bytes(client_socket)
-        received_json = json.loads(received_raw.decode('utf8'))
-        check_json(received_json, dict, 1)
-
-        return bytes.fromhex(received_json["report"])
+        msg = receive_msg(client_socket)
+        check_msg(msg, dict, 1)
+        return bytes.fromhex(msg["report"])
 
     def send_quote(self, client_socket: socket.socket, quote, qe_report):
-        self.logger.info("Preparing to send quote")
-
-        msg = json.dumps({"quote": quote.hex(), "qe_report": qe_report.hex()}).encode()
-
-        client_socket.sendall(msg)
+        msg = {"quote": quote.hex(), "qe_report": qe_report.hex()}
+        self.logger.info("Sending quote")
+        send_msg(client_socket, msg)
         self.logger.info("Quote sent")
 
 

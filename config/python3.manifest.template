@@ -36,8 +36,8 @@ fs.mount.tests.uri = file:$(TESTS_DIR)
 
 net.allow_bind.1 = 127.0.0.1:6789
 
-sys.stack.size = 256K
-sys.brk.size = 4M
+sys.stack.size = 4M
+sys.brk.size = 32M
 glibc.heap_size = 16M
 
 sgx.trusted_files.ld = file:$(RUNTIME)/ld-linux-x86-64.so.2
@@ -46,18 +46,118 @@ sgx.trusted_files.libdl = file:$(RUNTIME)/libdl.so.2
 sgx.trusted_files.libm = file:$(RUNTIME)/libm.so.6
 sgx.trusted_files.libpthread = file:$(RUNTIME)/libpthread.so.0
 sgx.trusted_files.liburil = file:$(RUNTIME)/libutil.so.1
+sgx.trusted_files.libresolv = file:$(RUNTIME)/libresolv.so.2
 sgx.trusted_files.libz = file:/lib/x86_64-linux-gnu/libz.so.1
 sgx.trusted_files.libexpat = file:/lib/x86_64-linux-gnu/libexpat.so.1
 
-# for attestation
-sgx.trusted_files.trusted_ra_manager = file:/usr/local/bin/trusted-ra-manager
+# For attestation
+sgx.trusted_files.sgx_ra_manager = file:/usr/local/bin/sgx-ra-manager
 sgx.trusted_files.libsgx_uae_service = file:/usr/lib/libsgx_uae_service.so
 sgx.trusted_files.libprotopuf = file:/usr/lib/x86_64-linux-gnu/libprotobuf.so.$(LIBPROTOBUF_VERSION)
 sgx.trusted_files.libstdcpp = file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
-sgx.trusted_files.attester_public_key = file:/etc/python-sgx/attester_public.key
+sgx.trusted_files.challenger_public_key = file:/etc/python-sgx/challenger_public.key
 
-sgx.allowed_files.pyhome = file:/usr/lib/python$(PYTHON_VERSION)
-sgx.allowed_files.pyhome_local = file:/usr/local/lib/python$(PYTHON_VERSION)
+# For the attested executable
+# XXX: Executing a trusted file causes "bug() bookkeep/shim_vma.c:245",
+#      but executing the same file in the allowed $(TESTS_DIR) succeeds
+#sgx.trusted_files.echo_server = file:/usr/local/bin/echo-server
+#sgx.trusted_files.netcat = file:/bin/nc.openbsd
+sgx.trusted_files.ncat = file:/usr/bin/ncat
+sgx.trusted_files.libpcap = file:/usr/lib/x86_64-linux-gnu/libpcap.so.0.8
+sgx.trusted_files.liblua = file:/usr/lib/x86_64-linux-gnu/liblua5.2.so.0
+#sgx.trusted_files.echo = file:/bin/echo
+#sgx.trusted_files.cat = file:/bin/cat
+sgx.trusted_files.date = file:/bin/date
+
+# sgx.trusted_files.echo_server = file:$(TESTS_DIR)/test_exec/tcp/echo-server
+# sgx.trusted_children.echo_server = file:$(TESTS_DIR)/test_exec/tcp/echo_server.sig
+#sgx.trusted_files.lighttpd = file:$(TESTS_DIR)/test_exec/lighttpd/build/sbin/lighttpd
+#sgx.trusted_children.lighttpd = file:$(TESTS_DIR)/test_exec/lighttpd/lighttpd.sig
+
+# XXX: This config allows execution of arbitrary code in the enclave by
+#      modifying Python modules in the allowed_files directory. To prevent
+#      this, all required Python files must be added as trusted_files instead.
+#sgx.allowed_files.pyhome = file:/usr/lib/python$(PYTHON_VERSION)
+#sgx.allowed_files.pyhome_local = file:/usr/local/lib/python$(PYTHON_VERSION)
 
 sgx.allowed_files.tests = file:$(TESTS_DIR)
+
+#sgx.trusted_files.libbsd = file:/lib/x86_64-linux-gnu/libbsd.so.0
+sgx.allowed_files.libs = file:/lib/x86_64-linux-gnu
+
+# For Python 3.5
+sgx.trusted_files.0 = file:/usr/lib/python3.5/encodings/__init__.py
+sgx.trusted_files.1 = file:/usr/lib/python3.5/codecs.py
+sgx.trusted_files.2 = file:/usr/lib/python3.5/encodings/aliases.py
+sgx.trusted_files.3 = file:/usr/lib/python3.5/encodings/ascii.py
+sgx.trusted_files.4 = file:/usr/lib/python3.5/encodings/utf_8.py
+sgx.trusted_files.5 = file:/usr/lib/python3.5/encodings/latin_1.py
+sgx.trusted_files.6 = file:/usr/lib/python3.5/io.py
+sgx.trusted_files.7 = file:/usr/lib/python3.5/abc.py
+sgx.trusted_files.8 = file:/usr/lib/python3.5/_weakrefset.py
+sgx.trusted_files.9 = file:/usr/lib/python3.5/_bootlocale.py
+sgx.trusted_files.10 = file:/usr/lib/python3.5/site.py
+sgx.trusted_files.11 = file:/usr/lib/python3.5/os.py
+sgx.trusted_files.12 = file:/usr/lib/python3.5/stat.py
+sgx.trusted_files.13 = file:/usr/lib/python3.5/posixpath.py
+sgx.trusted_files.14 = file:/usr/lib/python3.5/genericpath.py
+sgx.trusted_files.15 = file:/usr/lib/python3.5/_collections_abc.py
+sgx.trusted_files.16 = file:/usr/lib/python3.5/_sitebuiltins.py
+sgx.trusted_files.17 = file:/usr/lib/python3.5/sysconfig.py
+sgx.trusted_files.18 = file:/usr/lib/python3.5/_sysconfigdata.py
+sgx.trusted_files.19 = file:/usr/lib/python3.5/plat-x86_64-linux-gnu/_sysconfigdata_m.py
+sgx.trusted_files.20 = file:/usr/lib/python3.5/sitecustomize.py
+sgx.trusted_files.21 = file:/usr/lib/python3.5/encodings/cp437.py
+sgx.trusted_files.22 = file:/usr/lib/python3.5/socketserver.py
+sgx.trusted_files.23 = file:/usr/lib/python3.5/socket.py
+sgx.trusted_files.24 = file:/usr/lib/python3.5/selectors.py
+sgx.trusted_files.25 = file:/usr/lib/python3.5/collections/__init__.py
+sgx.trusted_files.26 = file:/usr/lib/python3.5/operator.py
+sgx.trusted_files.27 = file:/usr/lib/python3.5/keyword.py
+sgx.trusted_files.28 = file:/usr/lib/python3.5/heapq.py
+sgx.trusted_files.29 = file:/usr/lib/python3.5/reprlib.py
+sgx.trusted_files.30 = file:/usr/lib/python3.5/enum.py
+sgx.trusted_files.31 = file:/usr/lib/python3.5/types.py
+sgx.trusted_files.32 = file:/usr/lib/python3.5/functools.py
+sgx.trusted_files.33 = file:/usr/lib/python3.5/weakref.py
+sgx.trusted_files.34 = file:/usr/lib/python3.5/collections/abc.py
+sgx.trusted_files.35 = file:/usr/lib/python3.5/threading.py
+sgx.trusted_files.36 = file:/usr/lib/python3.5/traceback.py
+sgx.trusted_files.37 = file:/usr/lib/python3.5/linecache.py
+sgx.trusted_files.38 = file:/usr/lib/python3.5/tokenize.py
+sgx.trusted_files.39 = file:/usr/lib/python3.5/re.py
+sgx.trusted_files.40 = file:/usr/lib/python3.5/sre_compile.py
+sgx.trusted_files.41 = file:/usr/lib/python3.5/sre_parse.py
+sgx.trusted_files.42 = file:/usr/lib/python3.5/sre_constants.py
+sgx.trusted_files.43 = file:/usr/lib/python3.5/copyreg.py
+sgx.trusted_files.44 = file:/usr/lib/python3.5/token.py
+sgx.trusted_files.45 = file:/usr/lib/python3.5/logging/__init__.py
+sgx.trusted_files.46 = file:/usr/lib/python3.5/warnings.py
+sgx.trusted_files.47 = file:/usr/lib/python3.5/string.py
+sgx.trusted_files.48 = file:/usr/lib/python3.5/argparse.py
+sgx.trusted_files.49 = file:/usr/lib/python3.5/copy.py
+sgx.trusted_files.50 = file:/usr/lib/python3.5/textwrap.py
+sgx.trusted_files.51 = file:/usr/lib/python3.5/gettext.py
+sgx.trusted_files.52 = file:/usr/lib/python3.5/locale.py
+sgx.trusted_files.53 = file:/usr/lib/python3.5/struct.py
+sgx.trusted_files.54 = file:/usr/lib/python3.5/json/__init__.py
+sgx.trusted_files.55 = file:/usr/lib/python3.5/json/decoder.py
+sgx.trusted_files.56 = file:/usr/lib/python3.5/json/scanner.py
+sgx.trusted_files.57 = file:/usr/lib/python3.5/json/encoder.py
+sgx.trusted_files.58 = file:/usr/lib/python3.5/contextlib.py
+sgx.trusted_files.59 = file:/usr/lib/python3.5/importlib/__init__.py
+sgx.trusted_files.60 = file:/usr/local/lib/python3.5/dist-packages/setuptools.pth
+sgx.trusted_files.61 = file:/usr/local/lib/python3.5/dist-packages/easy-install.pth 
+
+# For pysgx
+sgx.trusted_files.pysgx0 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/__init__.py
+sgx.trusted_files.pysgx1 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/util.py
+sgx.trusted_files.pysgx2 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/exceptions.py
+sgx.trusted_files.pysgx3 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/config.py
+sgx.trusted_files.pysgx4 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/socket_util.py
+sgx.trusted_files.pysgx5 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/__init__.py
+sgx.trusted_files.pysgx6 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/__init__.py
+sgx.trusted_files.pysgx7 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/attestation.py
+sgx.trusted_files.pysgx8 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/attestation_swig.py
+sgx.trusted_files.pysgx9 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/_attestation_swig.so

@@ -7,7 +7,6 @@ https://github.com/pypa/sampleproject
 
 # Always prefer setuptools over distutils
 import os
-import sh
 import subprocess
 import platform
 # To use a consistent encoding
@@ -18,6 +17,13 @@ from setuptools import setup, find_packages
 
 import importlib
 config = importlib.import_module("sgx.config")
+
+try:
+    import sh
+except ImportError:
+    import pip
+    pip.main(["install", "sh>=1.12"])
+    import sh
 
 GRAPHENE_DIR = os.path.abspath("./graphene/")
 
@@ -57,18 +63,19 @@ sh.install("-m", "755", "-d", config.KEY_DIR)
 sh.install("-m", "755", "-d", config.DATA_DIR)
 
 
-# Copy trusted-ra-manager to `/usr/local/bin/`.
-# If trusted-ra-manager is included in the `scripts` argument to setup(), setup() creates a script
+# Copy sgx-ra-manager to `/usr/local/bin/`.
+# If sgx-ra-manager is included in the `scripts` argument to setup(), setup() creates a script
 # which uses run_script() to execute the actual script, thereby ignoring our custom shebang to run python3-sgx.
-sh.cp("scripts/trusted-ra-manager", "/usr/local/bin/")
+sh.cp("scripts/sgx-ra-manager", "/usr/local/bin/")
 
 
 # Create python3 sgx launcher in the data directory
 sh.cp("config/python3.manifest.template", config.DATA_DIR)
 create_manifest = sh.Command(os.path.abspath("utils/create_manifest.py"))
 sign_manifest = sh.Command(os.path.abspath("utils/sign_manifest.py"))
-create_manifest(config.DATA_DIR)
-sign_manifest(config.DATA_DIR)
+create_manifest(config.DATA_DIR, _fg=True)
+import sys
+sign_manifest(config.DATA_DIR, _fg=True)
 
 
 # Get the long description from the README file
@@ -126,7 +133,7 @@ dist = setup(
     packages=find_packages(exclude=['contrib', 'docs', 'tests']),
 
     scripts=["scripts/python3-sgx",
-             "scripts/untrusted-ra-manager"],
+             "scripts/sgx-quoting-manager"],
 
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:

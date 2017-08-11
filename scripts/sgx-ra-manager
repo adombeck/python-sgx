@@ -2,13 +2,13 @@
 
 import socketserver
 import socket
-import json
 import logging
 import argparse
 import struct
+import os
 
-from sgx.util import get_attester_public_key, check_json
-from sgx.socket_util import receive_bytes
+from sgx.util import get_challenger_public_key, check_msg
+from sgx.socket_util import receive_msg, send_msg
 
 # noinspection PyBroadException
 try:
@@ -21,12 +21,16 @@ except:
     exit()
 
 
-ATTESTER_LT_PUBLIC_KEY = get_attester_public_key()
+CHALLENGER_LT_PUBLIC_KEY = get_challenger_public_key()
 
 logging_handlers = list()
 
 manager = None
-ura_manager_port = None
+qm_port = None
+
+application = None
+arguments = None
+run_in_parallel = False
 
 
 class RequestHandler(socketserver.StreamRequestHandler):
@@ -39,7 +43,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         self.logger = logging.getLogger("Request#%s" % self.id)
 
         self.public_key = None
-        self.attester_public_key = None
+        self.challenger_public_key = None
         self.spid = None
         self.quote_type = None
         self.kdf_id = None
@@ -62,7 +66,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         client_socket = self.request
 
-        request = receive_bytes(client_socket)
+        request = client_socket.recv(1024)
 
         if request == b"attest":
             self.perform_attestation(client_socket)
@@ -70,7 +74,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def perform_attestation(self, client_socket: socket.socket):
         self.send_msg0(client_socket)
 
-        with remote_attestation_context(attester_public_key=ATTESTER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
+        with remote_attestation_context(challenger_public_key=CHALLENGER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
 
             self.create_msg1(ra_context)
             self.send_msg1(client_socket)
@@ -83,12 +87,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
             self.receive_msg4(client_socket)
 
-    def start_application(self):
-        import subprocess
-        # import os
-        # os.chdir("/var/lib/python-sgx/")
-        # subprocess.run(APPLICATION)
-        pass
+        if self.verification_result and not run_in_parallel:
+            run_application(application, arguments)
 
     # -------------------------------------------------------------------------
     # MSG0
@@ -97,28 +97,27 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def send_msg0(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg0")
         extended_epid_gid = self.get_extended_epid_gid()
-        msg0 = json.dumps({"extended_epid_gid": extended_epid_gid}).encode()
+        msg0 = {"extended_epid_gid": extended_epid_gid}
         self.logger.info("Sending msg0")
-        client_socket.sendall(msg0)
+        send_msg(client_socket, msg0)
 
     def get_extended_epid_gid(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
-            ura_socket.connect(("127.0.0.1", ura_manager_port))
+            ura_socket.connect(("127.0.0.1", qm_port))
             self.send_extended_epid_gid_request(ura_socket)
             return self.receive_extended_epid_gid(ura_socket)
 
     def send_extended_epid_gid_request(self, ura_socket: socket.socket):
         self.logger.info("Sending extended EPID group ID request")
-        msg = json.dumps({"request": "GET extended_epid_gid"}).encode()
-        ura_socket.sendall(msg)
+        msg = {"request": "GET extended_epid_gid"}
+        send_msg(ura_socket, msg)
         self.logger.info("Extended EPID group ID request sent")
 
     def receive_extended_epid_gid(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for extended EPID group ID")
-        received_raw = receive_bytes(ura_socket)
-        received_json = json.loads(received_raw.decode('utf8'))
-        check_json(received_json, dict, 1)
-        return received_json["extended_epid_gid"]
+        msg = receive_msg(ura_socket)
+        check_msg(msg, dict, 1)
+        return msg["extended_epid_gid"]
 
     # -------------------------------------------------------------------------
     # MSG1
@@ -126,22 +125,21 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def initialize_quoting_enclave(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
-            ura_socket.connect(("127.0.0.1", ura_manager_port))
+            ura_socket.connect(("127.0.0.1", qm_port))
             self.send_qe_init_request(ura_socket)
             return self.receive_qe_init_response(ura_socket)
 
     def send_qe_init_request(self, ura_socket: socket.socket):
         self.logger.info("Sending quoting enclave initialization request")
-        msg = json.dumps({"request": "INIT QE"}).encode()
-        ura_socket.sendall(msg)
+        msg = {"request": "INIT QE"}
+        send_msg(ura_socket, msg)
         self.logger.info("Quoting enclave initialization request sent")
 
     def receive_qe_init_response(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for quoting enclave target info")
-        received_raw = receive_bytes(ura_socket)
-        received_json = json.loads(received_raw.decode('utf8'))
-        check_json(received_json, dict, 2)
-        return bytes.fromhex(received_json["qe_target_info"]), bytes.fromhex(received_json["epid_gid"])
+        msg = receive_msg(ura_socket)
+        check_msg(msg, dict, 2)
+        return bytes.fromhex(msg["qe_target_info"]), bytes.fromhex(msg["epid_gid"])
 
     def create_msg1(self, ra_context):
         self.public_key = get_new_public_key(ra_context)
@@ -149,10 +147,10 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def send_msg1(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg1")
-        msg1 = json.dumps({"public_key": self.public_key.hex(),
-                           "epid_gid": self.epid_gid.hex()}).encode()
+        msg1 = {"public_key": self.public_key.hex(),
+                "epid_gid": self.epid_gid.hex()}
         self.logger.info("Sending msg1")
-        client_socket.sendall(msg1)
+        send_msg(client_socket, msg1)
 
     # -------------------------------------------------------------------------
     # MSG2
@@ -161,11 +159,10 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def receive_msg2(self, client_socket: socket.socket):
         self.logger.info("Waiting for msg2")
 
-        received_raw = receive_bytes(client_socket)
-        msg2 = json.loads(received_raw.decode('utf8'))
-        check_json(msg2, dict, 7)
+        msg2 = receive_msg(client_socket)
+        check_msg(msg2, dict, 7)
 
-        self.attester_public_key = bytes.fromhex(msg2["public_key"])
+        self.challenger_public_key = bytes.fromhex(msg2["public_key"])
         self.spid = bytes.fromhex(msg2["spid"])
         self.quote_type = struct.unpack("H", bytes.fromhex(msg2["quote_type"]))[0]
         self.kdf_id = struct.unpack("H", bytes.fromhex(msg2["kdf_id"]))[0]
@@ -181,7 +178,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         self.report, self.nonce = process_msg2(
             ra_context,
             self.qe_target_info,
-            self.attester_public_key,
+            self.challenger_public_key,
             self.spid,
             self.quote_type,
             self.kdf_id,
@@ -211,42 +208,42 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def get_quote(self):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as ura_socket:
-            ura_socket.connect(("127.0.0.1", ura_manager_port))
+            ura_socket.connect(("127.0.0.1", qm_port))
             self.send_quote_request(ura_socket)
             return self.receive_quote(ura_socket)
 
     def send_quote_request(self, ura_socket: socket.socket):
-        msg = json.dumps({
+        msg = {
             "request": "GET QUOTE",
             "report": self.report.hex(),
             "quote_type": self.quote_type,
             "spid": self.spid.hex(),
             "nonce": self.nonce.hex(),
             "revocation_list": self.revocation_list.hex()
-        }).encode()
+        }
 
         self.logger.info("Sending quote request (message size: %s)", len(msg))
-        ura_socket.sendall(msg)
+        send_msg(ura_socket, msg)
         self.logger.info("Quote request sent")
 
     def receive_quote(self, ura_socket: socket.socket()):
         self.logger.info("Waiting for quote")
-        received_raw = receive_bytes(ura_socket)
-        received_json = json.loads(received_raw.decode('utf8'))
-        check_json(received_json, dict, 2)
+        msg = receive_msg(ura_socket)
+        check_msg(msg, dict, 2)
         self.logger.info("Quote received")
-        return bytes.fromhex(received_json["quote"]), bytes.fromhex(received_json["qe_report"])
+        return bytes.fromhex(msg["quote"]), bytes.fromhex(msg["qe_report"])
 
     def send_msg3(self, client_socket: socket.socket):
         self.logger.info("Preparing to send msg3")
 
-        msg3 = json.dumps(
-            {"quote": self.quote.hex(),
+        msg3 = {
+            "quote": self.quote.hex(),
              "mac": self.msg3_mac.hex(),
-             "platform_service_security_properties": self.platform_service_security_properties.hex()}
-        ).encode()
+             "platform_service_security_properties": self.platform_service_security_properties.hex()
+        }
 
-        client_socket.sendall(msg3)
+        self.logger.debug("Sending msg3 %r", msg3)
+        send_msg(client_socket, msg3)
         self.logger.info("Msg3 sent")
 
     # -------------------------------------------------------------------------
@@ -255,9 +252,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
     def receive_msg4(self, client_socket: socket.socket):
         self.logger.info("Waiting for msg4")
-        received_raw = receive_bytes(client_socket)
-        msg4 = json.loads(received_raw.decode('utf8'))
-        check_json(msg4, dict, 1)
+        msg4 = receive_msg(client_socket)
+        check_msg(msg4, dict, 1)
         self.logger.info("Msg4 received")
         self.verification_result = msg4["verification_result"]
 
@@ -286,12 +282,36 @@ class Manager(object):
         self.server.serve_forever()
 
 
+def run_application_in_new_process(application, argv):
+    argv = [application] + argv
+    logging.info("Executing %r", " ".join(argv))
+
+    # XXX: Fails with "bug() bookkeep/shim_vma.c:246"
+    import subprocess
+    subprocess.Popen(argv)
+
+    # XXX: Also fails with "bug() bookkeep/shim_vma.c:246"
+    # os.spawnvp(os.P_NOWAIT, application, argv)
+
+    # XXX: Also fails with "bug() bookkeep/shim_vma.c:246"
+    # pid = os.fork()
+    # if pid == 0:
+    #     os.execvp(application, argv)
+
+
+def run_application(application, argv):
+    os.execvp(application, argv)
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--interface", "-i", default="127.0.0.1")
     parser.add_argument("--port", "-p", type=int, default=6789)
-    parser.add_argument("--ura-port", type=int, default=9876, help="Port of the untrusted remote attestation manager")
+    parser.add_argument("--qm-port", type=int, default=9876, help="Port of the quoting manager")
+    parser.add_argument("--parallel", action="store_true", help="Execute the target executable in parallel with the remote attestation manager")
     parser.add_argument("--verbose", "-v", action="store_true")
+    parser.add_argument("EXECUTABLE", help="Path to the remote attestation's target executable")
+    parser.add_argument("ARGUMENTS", nargs=argparse.REMAINDER, help="Arguments passed to the target executable")
     return parser.parse_args()
 
 
@@ -301,17 +321,27 @@ def init(args):
     else:
         logging.basicConfig(level=logging.INFO)
 
-    global ura_manager_port
-    ura_manager_port = args.ura_port
+    global qm_port
+    qm_port = args.qm_port
 
 
 def main():
     args = parse_args()
     init(args)
 
+    global application, arguments
+    application = args.EXECUTABLE
+    arguments = args.ARGUMENTS
+    run_in_parallel = args.parallel
+
+    if run_in_parallel:
+        run_application_in_new_process(args.EXECUTABLE, args.ARGUMENTS)
+
     global manager
     with Manager(args.interface, args.port) as manager:
         manager.run()
+
+    os.wait()
 
 
 if __name__ == "__main__":
