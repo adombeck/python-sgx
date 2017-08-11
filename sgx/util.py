@@ -2,11 +2,11 @@ import os
 
 from sgx.exceptions import UnexpectedLengthError
 
-from sgx.config import KEY_DIR
+from sgx.config import CONFIG_DIR
 
 
 def get_challenger_public_key():
-    pubkey_path = os.path.join(KEY_DIR, "challenger_public.key")
+    pubkey_path = os.path.join(CONFIG_DIR, "challenger_public.key")
     with open(pubkey_path) as pubkey_file:
         return bytes.fromhex(pubkey_file.read())
 

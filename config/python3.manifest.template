@@ -34,6 +34,10 @@ fs.mount.tests.type = chroot
 fs.mount.tests.path = /tests
 fs.mount.tests.uri = file:$(TESTS_DIR)
 
+fs.mount.sealed.type = chroot
+fs.mount.sealed.path = /sealed
+fs.mount.sealed.uri = file:/var/lib/python-sgx/sealed
+
 net.allow_bind.1 = 127.0.0.1:6789
 
 sys.stack.size = 4M
@@ -57,6 +61,11 @@ sgx.trusted_files.libprotopuf = file:/usr/lib/x86_64-linux-gnu/libprotobuf.so.$(
 sgx.trusted_files.libstdcpp = file:/usr/lib/x86_64-linux-gnu/libstdc++.so.6
 sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
 sgx.trusted_files.challenger_public_key = file:/etc/python-sgx/challenger_public.key
+
+# For sealing
+sgx.trusted_files.sealing = file:/usr/local/bin/sealing
+sgx.trusted_files.sealing_manifest = file:/etc/python-sgx/sealing_manifest
+sgx.allowed_files.sealed = file:/var/lib/python-sgx/sealed
 
 # For the attested executable
 # XXX: Executing a trusted file causes "bug() bookkeep/shim_vma.c:245",
