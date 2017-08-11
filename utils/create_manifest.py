@@ -7,8 +7,8 @@ import argparse
 DIR = os.path.dirname(__file__)
 
 import sys
-sys.path.append(os.path.join(DIR, '..'))
-from sgx.config import PYTHON_VERSION, LIBPROTOBUF_VERSION
+sys.path.append(os.path.join(DIR, '../config'))
+from config import PYTHON_VERSION, LIBPROTOBUF_VERSION
 
 GRAPHENE_DIR = os.path.abspath(os.path.join(DIR, "../graphene/"))
 RUNTIME = os.path.join(GRAPHENE_DIR, "Runtime")
