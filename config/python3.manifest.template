@@ -64,7 +64,7 @@ sgx.trusted_files.challenger_public_key = file:/etc/python-sgx/challenger_public
 
 # For sealing
 sgx.trusted_files.sealing = file:/usr/local/bin/sealing
-sgx.trusted_files.sealing_manifest = file:/etc/python-sgx/sealing_manifest
+sgx.trusted_files.sealing_manifest = file:/etc/python-sgx/sealing
 sgx.allowed_files.sealed = file:/var/lib/python-sgx/sealed
 
 # For the attested executable
@@ -170,3 +170,8 @@ sgx.trusted_files.pysgx6 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0
 sgx.trusted_files.pysgx7 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/attestation.py
 sgx.trusted_files.pysgx8 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/attestation_swig.py
 sgx.trusted_files.pysgx9 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/attestation/_attestation_swig.so
+sgx.trusted_files.pysgx10 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/__init__.py
+sgx.trusted_files.pysgx11 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/sealing.py
+sgx.trusted_files.pysgx12 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/sealing_swig.py
+sgx.trusted_files.pysgx13 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/_sealing_swig.so
+

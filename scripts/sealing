@@ -13,9 +13,9 @@ except:
     logging.exception('')
     exit()
 
-MANIFEST_PATH = os.path.join(config.CONFIG_DIR, 'sealing_manifest')
+MANIFEST_PATH = os.path.join(config.CONFIG_DIR, 'sealing')
 
-# XXX: Implement replay protection (not implemented in SDK yet)
+# XXX: Implement replay protection
 
 
 class PersistentFileNotFoundError(Exception):
@@ -167,6 +167,7 @@ def main():
 
         # XXX: For some reason the file modifications by the child are not synced with the parent,
         #      therefore the sealing doesn't work with child processes.
+        # import sys
         # exit_code = os.spawnvp(os.P_WAIT, sys.argv[1], sys.argv[1:])
         # if exit_code != 0:
         #     logging.error("Command %r exited with code %r", " ".join(sys.argv[1:]), exit_code)
