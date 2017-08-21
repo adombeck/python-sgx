@@ -8,7 +8,7 @@ DIR = os.path.dirname(__file__)
 
 import sys
 sys.path.append(os.path.join(DIR, '../config'))
-from config import PYTHON_VERSION, LIBPROTOBUF_VERSION
+from config import PYTHON_VERSION, LIBPROTOBUF_VERSION, DATA_DIR, CONFIG_DIR
 
 GRAPHENE_DIR = os.path.abspath(os.path.join(DIR, "../graphene/"))
 RUNTIME = os.path.join(GRAPHENE_DIR, "Runtime")
@@ -44,6 +44,8 @@ def main():
         with open(manifest_template) as f_template:
             with open(manifest, "w+") as f_manifest:
                 for line in f_template:
+                    line = line.replace("$(DATA_DIR)", DATA_DIR)
+                    line = line.replace("$(CONFIG_DIR)", CONFIG_DIR)
                     line = line.replace("$(RUNTIME)", RUNTIME)
                     line = line.replace("$(PYTHON_VERSION)", PYTHON_VERSION)
                     line = line.replace("$(LIBPROTOBUF_VERSION)", LIBPROTOBUF_VERSION)

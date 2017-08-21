@@ -2,7 +2,7 @@ import os
 
 from sgx.exceptions import UnexpectedLengthError
 
-from sgx.config import CONFIG_DIR
+CONFIG_DIR = "/python-sgx"
 
 
 def get_challenger_public_key():

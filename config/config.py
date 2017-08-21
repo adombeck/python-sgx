@@ -1,5 +1,5 @@
-CONFIG_DIR = "/etc/python-sgx/"
-DATA_DIR = "/var/lib/python-sgx/"
+CONFIG_DIR = "/etc/python-sgx"
+DATA_DIR = "/var/lib/python-sgx"
 SEALED_DIR = DATA_DIR + "sealed/"
 
 GROUP = "sgx"
