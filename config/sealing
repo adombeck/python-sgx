@@ -1,0 +1,2 @@
+# Type	([f]ile / [d]irectory)	Sealed Path	Unsealed Path
+f	/sealed/test	/tests/unsealed
