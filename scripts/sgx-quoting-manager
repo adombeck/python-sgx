@@ -53,7 +53,14 @@ class RequestHandler(socketserver.StreamRequestHandler):
             self.logger.warning("revocation list: %r", revocation_list)
 
             quote_size = get_quote_size(revocation_list)
-            quote, qe_report = get_quote(report, quote_type, spid, nonce, revocation_list, quote_size)
+            quote, qe_report = get_quote(
+                report,
+                quote_type,
+                spid,
+                nonce,
+                revocation_list,
+                quote_size
+            )
 
             self.send_quote(client_socket, quote, qe_report)
 
@@ -97,7 +104,7 @@ class Manager(object):
         self.server.server_close()
 
     def run(self):
-        self.logger.info("Listening for attestation requests on %s:%s", self.interface, self.port)
+        self.logger.info("Listening for requests on %s:%s", self.interface, self.port)
         self.server.serve_forever()
 
 

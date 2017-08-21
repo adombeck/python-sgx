@@ -56,7 +56,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         self.quote = None
         self.qe_report = None
         self.msg3_mac = None
-        self.platform_service_security_properties = None
+        self.ps_sec_prop = None
         self.verification_result = None
 
         super(RequestHandler, self).__init__(*args, **kwargs)
@@ -74,7 +74,8 @@ class RequestHandler(socketserver.StreamRequestHandler):
     def perform_attestation(self, client_socket: socket.socket):
         self.send_msg0(client_socket)
 
-        with remote_attestation_context(challenger_public_key=CHALLENGER_LT_PUBLIC_KEY, use_pse=0) as ra_context:
+        with remote_attestation_context(challenger_public_key=CHALLENGER_LT_PUBLIC_KEY,
+                                        use_pse=0) as ra_context:
 
             self.create_msg1(ra_context)
             self.send_msg1(client_socket)
@@ -198,7 +199,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
         self.quote, self.qe_report = self.get_quote()
 
-        self.msg3_mac, self.platform_service_security_properties = get_msg3(
+        self.msg3_mac, self.ps_sec_prop = get_msg3(
             ra_context,
             self.quote,
             self.qe_report
@@ -239,7 +240,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
         msg3 = {
             "quote": self.quote.hex(),
              "mac": self.msg3_mac.hex(),
-             "platform_service_security_properties": self.platform_service_security_properties.hex()
+             "ps_sec_prop": self.ps_sec_prop.hex()
         }
 
         self.logger.debug("Sending msg3 %r", msg3)
@@ -278,25 +279,17 @@ class Manager(object):
         self.logger.exception("Exception while handling request %r" % request)
 
     def run(self):
-        self.logger.info("Listening for attestation requests on %s:%s", self.interface, self.port)
+        self.logger.info("Listening for requests on %s:%s", self.interface, self.port)
         self.server.serve_forever()
 
 
 def run_application_in_new_process(application, argv):
+    # XXX: Fails with "bug() bookkeep/shim_vma.c:246"
     argv = [application] + argv
     logging.info("Executing %r", " ".join(argv))
 
-    # XXX: Fails with "bug() bookkeep/shim_vma.c:246"
     import subprocess
     subprocess.Popen(argv)
-
-    # XXX: Also fails with "bug() bookkeep/shim_vma.c:246"
-    # os.spawnvp(os.P_NOWAIT, application, argv)
-
-    # XXX: Also fails with "bug() bookkeep/shim_vma.c:246"
-    # pid = os.fork()
-    # if pid == 0:
-    #     os.execvp(application, argv)
 
 
 def run_application(application, argv):
