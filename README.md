@@ -1,9 +1,6 @@
 # Python SGX
 
-A Python wrapper around Intel's SGX Linux SDK, to be used inside an SGX enclave.
-
-Currently, this project does not provide functions to *create* an enclave. Instead, it is meant to be used by Python modules which run inside an *otherwise* created enclave. It was developed and tested exclusively for usage with the Graphene Library OS, which runs applications inside an SGX enclave.
-
+A Python wrapper around Intel's SGX Linux SDK, to be used inside an SGX enclave. Uses [Graphene-SGX](https://github.com/oscarlab/graphene) to execute Python in an enclave.
 
 ## Requirements
 1. [Intel SGX Linux Driver](https://github.com/01org/linux-sgx-driver)
@@ -18,7 +15,7 @@ Currently, this project does not provide functions to *create* an enclave. Inste
 
 ## Installation
 
-1. Initialize git submodules:
+1. Initialize the submodules:
 
         git submodule update --init
 
@@ -37,7 +34,7 @@ Currently, this project does not provide functions to *create* an enclave. Inste
 
         sudo usermod -a -G sgx $USER
 
-	 Remember that this change will only take effect after a new login.
+	  Note that this will only take effect after a new login.
 
 
 ## Uninstallation
@@ -47,27 +44,25 @@ Currently, this project does not provide functions to *create* an enclave. Inste
         sudo ./uninstall.sh
 
 
-## Run tests
+## Test sealing
 
     python3-sgx tests/test_seal.py seal
     python3-sgx tests/test_seal.py unseal
 
-Note: You have to be in the repositories base directory to be able to run the tests. 
+Note: You have to be in the repository's base directory to be able to run the tests. 
 
 ## Test remote attestation
-Note: You need to install the [python-sgx-attester](https://github.com/adombeck/python-sgx-attester) to connect to the remote attestation manager
+Note: You need to install the [challenger package](https://github.com/adombeck/sgx-ra-challenger) on the challenging machine and store a copy of the challenger's public key in `/etc/python-sgx/challenger_public.key`. The [SGX Remote Attestation Challenger package](https://github.com/adombeck/sgx-ra-challenger) contains a script `generate_key_pair.py` which creates a key in the required format.
 
-1. Run the untrusted remote attestation manager:
+1. Run the Quoting Manager (handles communication with the Quoting Enclave):
 
-        untrusted-ra-manager
+        quoting-manager
+        
+2. Run the Remote Attestation Manager (handles communication with the challenger):
 
-2. Run the trusted remote attestation manager:
+        sgx-ra-manager
 
-        trusted-ra-manager
+3. Use the [SGX Remote Attestation Challenger](https://github.com/adombeck/sgx-ra-challenger) to connect to the Remote Attestation Manager:
 
-3. Connect to the `trusted-ra-manager` with the `sgx-attester`
+        sgx-ra-challenger -c 127.0.0.1 6789
 
-        sgx-attester -c 127.0.0.1 6789
-
-## Notes
-In order to use the remote attestation, you have to acquire a copy of the attester's public key through a trusted channel and store it in `/etc/python-sgx/attester_public.key`. The `Python SGX Attester` package contains a script `generate_key_pair.py` which creates the key in the required format.
