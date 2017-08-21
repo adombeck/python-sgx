@@ -1,6 +1,6 @@
 # Python SGX
 
-A Python wrapper around Intel's SGX Linux SDK, to be used inside an SGX enclave. Uses [Graphene-SGX](https://github.com/oscarlab/graphene) to execute Python in an enclave.
+A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.com/oscarlab/graphene) to execute Python in an enclave.
 
 ## Requirements
 1. [Intel SGX Linux Driver](https://github.com/01org/linux-sgx-driver)
@@ -24,7 +24,7 @@ A Python wrapper around Intel's SGX Linux SDK, to be used inside an SGX enclave.
         cd linux-sgx && ./setup.sh && cd ..
         cd graphene && ./setup.sh && cd ..
 
-3. Adjust the paths in `sgx/config.py` (or keep the default paths)
+3. Adjust the paths in `config/config.py` (or keep the default paths)
 4. Run the setup script:
 
         ./setup.sh
