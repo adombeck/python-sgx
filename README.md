@@ -48,6 +48,7 @@ A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.
 
     python3-sgx tests/test_seal.py seal
     python3-sgx tests/test_seal.py unseal
+    python3-sgx tests/test_sealing_wrapper.py
 
 Note: You have to be in the repository's base directory to be able to run the tests. 
 

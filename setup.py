@@ -71,7 +71,6 @@ sh.install("-m", "770", "-g", config.GROUP, "-d", config.SEALED_DIR)
 # We don't include sgx-ra-manager in the `scripts` argument to setup(), because setup() creates a script
 # which uses run_script() to execute the actual script, thereby ignoring our custom shebang to run python3-sgx.
 sh.cp("scripts/sgx-ra-manager", "/usr/local/bin/")
-sh.cp("scripts/sealing", "/usr/local/bin/")
 
 # Copy sealing manifest to config directory
 sh.cp("config/sealing", config.CONFIG_DIR)

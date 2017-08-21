@@ -159,7 +159,7 @@ sgx.trusted_files.59 = file:/usr/lib/python3.5/importlib/__init__.py
 sgx.trusted_files.60 = file:/usr/local/lib/python3.5/dist-packages/setuptools.pth
 sgx.trusted_files.61 = file:/usr/local/lib/python3.5/dist-packages/easy-install.pth 
 
-# For pysgx
+# For python-sgx
 sgx.trusted_files.pysgx0 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/__init__.py
 sgx.trusted_files.pysgx1 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/util.py
 sgx.trusted_files.pysgx2 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/exceptions.py
@@ -174,4 +174,4 @@ sgx.trusted_files.pysgx10 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a
 sgx.trusted_files.pysgx11 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/sealing.py
 sgx.trusted_files.pysgx12 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/sealing_swig.py
 sgx.trusted_files.pysgx13 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/_sealing_swig.so
-
+sgx.trusted_files.pysgx14 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/trusted/sealing/wrapper.py
