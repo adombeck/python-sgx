@@ -14,8 +14,11 @@ from distutils.version import LooseVersion
 
 from setuptools import setup, find_packages
 
+import os, sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "sgx"))
+
 import importlib
-config = importlib.import_module("sgx.config")
+config = importlib.import_module("config")
 
 try:
     import sh
@@ -143,7 +146,7 @@ dist = setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['sh', ],
+    #install_requires=[],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
