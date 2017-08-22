@@ -3,10 +3,11 @@
 A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.com/oscarlab/graphene) to execute Python in an enclave.
 
 ## Requirements
-1. [Intel SGX Linux Driver](https://github.com/01org/linux-sgx-driver)
 
 
 ## Submodules
+
+1. [Intel SGX Linux Driver](https://github.com/adombeck/linux-sgx-driver)
 
 1. [Patched Intel SGX Linux SDK](https://github.com/adombeck/linux-sgx)
 
@@ -21,6 +22,7 @@ A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.
 
 2. Run the submodules' setup scripts:
 
+        cd linux-sgx-driver && ./setup.sh && cd ..
         cd linux-sgx && ./setup.sh && cd ..
         cd graphene && ./setup.sh && cd ..
 
