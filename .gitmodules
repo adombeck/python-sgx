@@ -4,3 +4,7 @@
 [submodule "graphene"]
 	path = graphene
 	url = https://github.com/adombeck/graphene
+[submodule "linux-sgx-driver"]
+	path = linux-sgx-driver
+	url = https://github.com/01org/linux-sgx-driver
+	branch = master
