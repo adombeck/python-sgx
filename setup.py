@@ -30,8 +30,11 @@ GRAPHENE_DIR = os.path.abspath("./graphene/")
 sh.cp("config/config.py", "sgx/config.py")
 
 # Check if swig >= 3.0.10 is installed
-out = sh.grep(sh.dpkg("-s", "swig", "swig3.0", _ok_code=[0,1]), '^Version:')
-version = out.split(" ")[-1].split("-")[0]
+try:
+    out = sh.grep(sh.dpkg("-s", "swig", "swig3.0"), '^Version:')
+    version = out.split(" ")[-1].split("-")[0]
+except sh.ErrorReturnCode_1:
+    version = None
 if not version:
   exit("Error: Couldn't find swig")
 if LooseVersion(version) < LooseVersion("3.0.10"):
