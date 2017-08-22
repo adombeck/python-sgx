@@ -63,20 +63,23 @@ sgx.trusted_files.libgcc_s = file:/lib/x86_64-linux-gnu/libgcc_s.so.1
 sgx.trusted_files.challenger_public_key = file:$(CONFIG_DIR)/challenger_public.key
 
 # For sealing
-sgx.trusted_files.sealing = file:/usr/local/bin/sealing
 sgx.trusted_files.sealing_manifest = file:$(CONFIG_DIR)/sealing
 sgx.allowed_files.sealed = file:$(DATA_DIR)/sealed
 
 # For the attested executable
-sgx.trusted_files.ncat = file:/usr/bin/ncat
-sgx.trusted_files.libpcap = file:/usr/lib/x86_64-linux-gnu/libpcap.so.0.8
-sgx.trusted_files.liblua = file:/usr/lib/x86_64-linux-gnu/liblua5.2.so.0
-sgx.trusted_files.date = file:/bin/date
+#sgx.trusted_files.ncat = file:/usr/bin/ncat
+#sgx.trusted_files.libpcap = file:/usr/lib/x86_64-linux-gnu/libpcap.so.0.8
+#sgx.trusted_files.liblua = file:/usr/lib/x86_64-linux-gnu/liblua5.2.so.0
+#sgx.trusted_files.date = file:/bin/date
 
 # Allow tests
 sgx.allowed_files.tests = file:$(TESTS_DIR)
 
 # For Python 3.5
+# You can uncomment the following lines to allow all python modules for testing
+#sgx.allowed_files.python_home = file:/usr/lib/python3.5
+#sgx.allowed_files.python_home2 = file:/usr/local/lib/python3.5
+
 sgx.trusted_files.0 = file:/usr/lib/python3.5/encodings/__init__.py
 sgx.trusted_files.1 = file:/usr/lib/python3.5/codecs.py
 sgx.trusted_files.2 = file:/usr/lib/python3.5/encodings/aliases.py
@@ -137,8 +140,7 @@ sgx.trusted_files.56 = file:/usr/lib/python3.5/json/scanner.py
 sgx.trusted_files.57 = file:/usr/lib/python3.5/json/encoder.py
 sgx.trusted_files.58 = file:/usr/lib/python3.5/contextlib.py
 sgx.trusted_files.59 = file:/usr/lib/python3.5/importlib/__init__.py
-sgx.trusted_files.60 = file:/usr/local/lib/python3.5/dist-packages/setuptools.pth
-sgx.trusted_files.61 = file:/usr/local/lib/python3.5/dist-packages/easy-install.pth 
+sgx.trusted_files.60 = file:/usr/local/lib/python3.5/dist-packages/easy-install.pth 
 
 # For python-sgx
 sgx.trusted_files.pysgx0 = file:/usr/local/lib/python3.5/dist-packages/sgx-0.1a0-py3.5.egg/sgx/__init__.py
