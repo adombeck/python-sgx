@@ -88,7 +88,7 @@ class RequestHandler(socketserver.StreamRequestHandler):
 
             self.receive_msg4(client_socket)
 
-        if self.verification_result and not run_in_parallel:
+        if self.verification_result and application and not run_in_parallel:
             run_application(application, arguments)
 
     # -------------------------------------------------------------------------
@@ -303,7 +303,7 @@ def parse_args():
     parser.add_argument("--qm-port", type=int, default=9876, help="Port of the quoting manager")
     parser.add_argument("--parallel", action="store_true", help="Execute the target executable in parallel with the remote attestation manager")
     parser.add_argument("--verbose", "-v", action="store_true")
-    parser.add_argument("EXECUTABLE", help="Path to the remote attestation's target executable")
+    parser.add_argument("EXECUTABLE", nargs="?", help="Path to the remote attestation's target executable")
     parser.add_argument("ARGUMENTS", nargs=argparse.REMAINDER, help="Arguments passed to the target executable")
     return parser.parse_args()
 
@@ -327,7 +327,7 @@ def main():
     arguments = args.ARGUMENTS
     run_in_parallel = args.parallel
 
-    if run_in_parallel:
+    if run_in_parallel and args.EXECUTABLE:
         run_application_in_new_process(args.EXECUTABLE, args.ARGUMENTS)
 
     global manager
