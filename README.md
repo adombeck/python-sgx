@@ -25,12 +25,16 @@ A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.
         cd graphene && ./setup.sh && cd ..
 
 3. Adjust the paths in `config/config.py` (or keep the default paths)
-4. Run the setup script:
+4. Copy the public key of the [SGX Remote Attestation Challenger](https://github.com/adombeck/sgx-ra-challenger) to `/etc/python-sgx/challenger_public.key`, or delete this line from the `config/python3.manifest.template` if you don't want to use the remote attestation:
+
+	sgx.trusted_files.challenger_public_key = file:$(CONFIG_DIR)/challenger_public.key
+
+5. Run the setup script:
 
         ./setup.sh
 
 
-5. Add your user to the `sgx` group:
+6. Add your user to the `sgx` group:
 
         sudo usermod -a -G sgx $USER
 
