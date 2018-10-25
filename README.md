@@ -2,7 +2,9 @@
 
 A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.com/oscarlab/graphene) to execute Python in an enclave.
 
-## Requirements
+## Project Status
+
+**Not actively maintained**
 
 
 ## Submodules
