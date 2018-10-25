@@ -15,7 +15,7 @@ from distutils.version import LooseVersion
 from setuptools import setup, find_packages
 
 import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "sgx"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "config"))
 
 import importlib
 config = importlib.import_module("config")
