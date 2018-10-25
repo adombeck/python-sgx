@@ -4,16 +4,22 @@ A Python interface to the SGX SDK for Linux. Uses [Graphene-SGX](https://github.
 
 ## Project Status
 
-**Not actively maintained**
+**Not actively maintained as of August 2017.**
+
+**Probably doesn't even build anymore.**
+
+**You don't want to use this if you are not prepared to maintain it yourself.**
 
 
 ## Submodules
+
+**The submodules are outdated. Don't file bug reports to the original authors if you use these forks.**
 
 1. [Intel SGX Linux Driver](https://github.com/adombeck/linux-sgx-driver)
 
 1. [Patched Intel SGX Linux SDK](https://github.com/adombeck/linux-sgx)
 
-2. [Patched Graphene Library OS](https://github.com/adombeck/graphene)
+1. [Patched Graphene Library OS](https://github.com/adombeck/graphene)
 
 
 ## Installation
